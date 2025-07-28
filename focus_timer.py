@@ -240,14 +240,19 @@ def restore_browser_sessions():
 
         for browser in running_browsers:
             try:
-                # 브라우저 활성화 후 대기
+                # 브라우저 활성화
                 os.system(f"osascript -e 'tell application \"{browser}\" to activate' 2>/dev/null")
-                time.sleep(1)  # 브라우저 활성화 대기
+                # 새 창 닫기 (Cmd+W)
+                os.system("osascript -e 'tell application \"System Events\" to key code 13 using {command down}' 2>/dev/null")
+                # 브라우저 활성화 대기
+                # time.sleep(0.5)
+                os.system("osascript -e 'tell application \"System Events\" to key code 13 using {command down}' 2>/dev/null")
+                # Cmd+Shift+T로 세션 복구
+                os.system("osascript -e 'tell application \"System Events\" to key code 17 using {command down, shift down}' 2>/dev/null")
 
                 # 모든 브라우저에 대해 Cmd+Shift+T 두 번 실행
-                os.system("osascript -e 'tell application \"System Events\" to key code 17 using {command down, shift down}' 2>/dev/null")
-                time.sleep(0.5)
-                os.system("osascript -e 'tell application \"System Events\" to key code 17 using {command down, shift down}' 2>/dev/null")
+                #time.sleep(0.1)
+                #os.system("osascript -e 'tell application \"System Events\" to key code 17 using {command down, shift down}' 2>/dev/null")
 
                 print(f"✅ {browser} 세션 복구 완료")
 
