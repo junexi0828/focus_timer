@@ -205,43 +205,25 @@ def force_browser_cache_clear():
         print(f"⚠️ 브라우저 캐시 초기화 중 오류: {e}")
 
 def save_browser_sessions():
-    """브라우저 세션 정보를 저장"""
+    """브라우저 세션 정보를 저장 (간단한 버전)"""
     try:
         running_browsers = get_running_browsers()
 
         if not running_browsers:
             return
 
-        session_info = {}
-
-        for browser in running_browsers:
-            try:
-                if browser == "Google Chrome":
-                    # Chrome 세션 파일 경로
-                    chrome_session = os.path.expanduser("~/Library/Application Support/Google/Chrome/Default/Session")
-                    if os.path.exists(chrome_session):
-                        session_info[browser] = chrome_session
-
-                elif browser == "Safari":
-                    # Safari 세션 파일 경로
-                    safari_session = os.path.expanduser("~/Library/Safari/LastSession.plist")
-                    if os.path.exists(safari_session):
-                        session_info[browser] = safari_session
-
-                elif browser == "Firefox":
-                    # Firefox 세션 파일 경로
-                    firefox_profile = os.path.expanduser("~/Library/Application Support/Firefox/Profiles")
-                    if os.path.exists(firefox_profile):
-                        session_info[browser] = firefox_profile
-
-            except Exception as e:
-                print(f"⚠️ {browser} 세션 저장 중 오류: {e}")
+        # 실행 중인 브라우저 목록만 저장
+        session_info = {
+            "running_browsers": running_browsers,
+            "timestamp": datetime.datetime.now().isoformat()
+        }
 
         # 세션 정보를 파일에 저장
-        if session_info:
-            with open(os.path.expanduser("~/focus_timer_sessions.json"), "w") as f:
-                import json
-                json.dump(session_info, f)
+        with open(os.path.expanduser("~/focus_timer_sessions.json"), "w") as f:
+            import json
+            json.dump(session_info, f)
+
+        print(f"✅ 브라우저 세션 정보 저장 완료 ({len(running_browsers)}개 브라우저)")
 
     except Exception as e:
         print(f"⚠️ 세션 저장 중 오류: {e}")
@@ -258,25 +240,14 @@ def restore_browser_sessions():
 
         for browser in running_browsers:
             try:
-                # 브라우저 활성화
+                # 브라우저 활성화 후 대기
                 os.system(f"osascript -e 'tell application \"{browser}\" to activate' 2>/dev/null")
-                time.sleep(1)
+                time.sleep(1)  # 브라우저 활성화 대기
 
-                if browser == "Google Chrome":
-                    # Chrome 세션 복구 (Cmd+Shift+T로 탭 복구)
-                    os.system("osascript -e 'tell application \"System Events\" to keystroke \"t\" using {command down, shift down}' 2>/dev/null")
-
-                elif browser == "Safari":
-                    # Safari 세션 복구 (Cmd+Shift+T로 탭 복구)
-                    os.system("osascript -e 'tell application \"System Events\" to keystroke \"t\" using {command down, shift down}' 2>/dev/null")
-
-                elif browser == "Firefox":
-                    # Firefox 세션 복구 (Cmd+Shift+T로 탭 복구)
-                    os.system("osascript -e 'tell application \"System Events\" to keystroke \"t\" using {command down, shift down}' 2>/dev/null")
-
-                else:
-                    # 다른 브라우저도 동일한 단축키 시도
-                    os.system("osascript -e 'tell application \"System Events\" to keystroke \"t\" using {command down, shift down}' 2>/dev/null")
+                # 모든 브라우저에 대해 Cmd+Shift+T 두 번 실행
+                os.system("osascript -e 'tell application \"System Events\" to key code 17 using {command down, shift down}' 2>/dev/null")
+                time.sleep(0.5)
+                os.system("osascript -e 'tell application \"System Events\" to key code 17 using {command down, shift down}' 2>/dev/null")
 
                 print(f"✅ {browser} 세션 복구 완료")
 
@@ -287,6 +258,37 @@ def restore_browser_sessions():
 
     except Exception as e:
         print(f"⚠️ 브라우저 세션 복구 중 오류: {e}")
+
+def simple_dns_flush():
+    """DNS 캐시만 초기화 (가장 안전하고 빠른 방법)"""
+    try:
+        os.system("sudo dscacheutil -flushcache")
+        os.system("sudo killall -HUP mDNSResponder")
+        print("🔄 DNS 캐시 초기화 완료")
+    except Exception as e:
+        print(f"⚠️ DNS 캐시 초기화 중 오류: {e}")
+
+def optimized_browser_clear():
+    """최적화된 브라우저 조작 (DNS + 새로고침만)"""
+    try:
+        # DNS 캐시 초기화
+        simple_dns_flush()
+
+        # 실행 중인 브라우저 새로고침만
+        running_browsers = get_running_browsers()
+        if running_browsers:
+            print(f"🔄 브라우저 새로고침 중... ({', '.join(running_browsers)})")
+            for browser in running_browsers:
+                try:
+                    os.system(f"osascript -e 'tell application \"{browser}\" to activate' 2>/dev/null")
+                    time.sleep(1)  # 브라우저 활성화 대기
+                    os.system("osascript -e 'tell application \"System Events\" to key code 15 using {command down}' 2>/dev/null")
+                    print(f"✅ {browser} 새로고침 완료")
+                except Exception as e:
+                    print(f"⚠️ {browser} 새로고침 중 오류: {e}")
+            print("✅ 브라우저 새로고침 완료")
+    except Exception as e:
+        print(f"⚠️ 브라우저 조작 중 오류: {e}")
 
 def force_browser_restart():
     """실행 중인 브라우저를 안전하게 재시작하고 세션 복구"""
@@ -321,7 +323,7 @@ def force_browser_restart():
                 print(f"⚠️ {browser} 재시작 중 오류: {e}")
 
         # 브라우저 재시작 후 세션 복구
-        time.sleep(3)  # 브라우저 완전 로딩 대기
+        time.sleep(5)  # 브라우저 완전 로딩 대기 (더 긴 대기 시간)
         restore_browser_sessions()
 
         print("✅ 브라우저 재시작 완료")
@@ -340,10 +342,18 @@ def force_browser_refresh():
         print(f"🔄 브라우저 새로고침 중... ({', '.join(running_browsers)})")
 
         for browser in running_browsers:
-            # 브라우저가 실행 중이면 새로고침 신호 전송
-            os.system(f"osascript -e 'tell application \"{browser}\" to activate' 2>/dev/null")
-            time.sleep(0.5)  # 잠시 대기
-            os.system(f"osascript -e 'tell application \"System Events\" to key code 124 using {{command down, shift down}}' 2>/dev/null")
+            try:
+                # 브라우저 활성화
+                os.system(f"osascript -e 'tell application \"{browser}\" to activate' 2>/dev/null")
+                time.sleep(1)  # 브라우저 활성화 대기
+
+                # 올바른 새로고침 단축키 사용 (Cmd+R) - key code 15 사용
+                os.system("osascript -e 'tell application \"System Events\" to key code 15 using {command down}' 2>/dev/null")
+
+                print(f"✅ {browser} 새로고침 완료")
+
+            except Exception as e:
+                print(f"⚠️ {browser} 새로고침 중 오류: {e}")
 
         print("✅ 브라우저 새로고침 완료")
 
@@ -383,7 +393,7 @@ def block_websites():
                 new_entries.append(entry)
             new_entries.append(block_end)
 
-        # 새로운 차단 설정이 있거나, 이전에 해제된 적이 있으면 DNS 초기화
+        # 새로운 차단 설정이 있거나, 이전에 해제된 적이 있으면 처리
         if new_entries or was_unblocked:
             if new_entries:
                 file.writelines(new_entries)
@@ -391,19 +401,8 @@ def block_websites():
                 os.fsync(file.fileno())  # 디스크에 강제 기록
                 print("📝 hosts 파일에 차단 설정 추가")
 
-            # DNS 캐시 초기화
-            try:
-                os.system("sudo dscacheutil -flushcache")
-                os.system("sudo killall -HUP mDNSResponder")
-                print("🔄 DNS 캐시 초기화 완료")
-            except:
-                pass
-
-            # 브라우저 캐시 자동 초기화
-            clear_browser_cache()
-
-            # 브라우저 강제 새로고침 신호 전송
-            force_browser_refresh()
+            # 최적화된 브라우저 조작 (DNS + 새로고침)
+            optimized_browser_clear()
 
             # 브라우저 재시작 (세션 보존)
             force_browser_restart()
@@ -446,19 +445,8 @@ def unblock_websites():
             os.fsync(file.fileno())  # 디스크에 강제 기록
             print("📝 hosts 파일에서 차단 설정 제거")
 
-            # DNS 캐시 초기화
-            try:
-                os.system("sudo dscacheutil -flushcache")
-                os.system("sudo killall -HUP mDNSResponder")
-                print("🔄 DNS 캐시 초기화 완료")
-            except:
-                pass
-
-            # 브라우저 캐시 자동 초기화
-            clear_browser_cache()
-
-            # 브라우저 강제 새로고침 신호 전송
-            force_browser_refresh()
+            # 최적화된 브라우저 조작 (DNS + 새로고침만)
+            optimized_browser_clear()
 
             was_unblocked = True  # 해제 상태로 설정 (다음 차단 시 DNS 초기화 보장)
             save_state()  # 상태 저장
@@ -490,6 +478,16 @@ def choose_mode():
     if mode == "1":
         start_hour = int(input("차단 시작 시간 (24시간 기준, 예: 9): "))
         end_hour = int(input("차단 종료 시간 (예: 18): "))
+
+        # 테스트 모드 확인
+        test_mode = input("테스트 모드입니까? (y/n): ").lower() == 'y'
+        if test_mode:
+            sleep_time = 10  # 테스트 모드면 10초마다 체크
+            print("🧪 테스트 모드: 10초마다 체크")
+        else:
+            sleep_time = 60  # 일반 모드면 1분마다 체크
+            print("📅 일반 모드: 1분마다 체크")
+
         print("⏳ 매일 시간대 차단 모드 실행 중... Ctrl+C로 종료")
 
         current_blocked = None  # 현재 차단 상태 추적
@@ -503,13 +501,13 @@ def choose_mode():
                 if current_blocked != should_be_blocked:
                     if should_be_blocked:
                         block_websites()
-                        print(f"🔒 {now.strftime('%H:%M')} - YouTube 차단 시작")
+                        print(f"🔒 {now.strftime('%H:%M:%S')} - YouTube 차단 시작")
                     else:
                         unblock_websites()
-                        print(f"🔓 {now.strftime('%H:%M')} - YouTube 차단 해제")
+                        print(f"🔓 {now.strftime('%H:%M:%S')} - YouTube 차단 해제")
                     current_blocked = should_be_blocked
 
-                time.sleep(60)
+                time.sleep(sleep_time)
         except KeyboardInterrupt:
             print("\n🛑 사용자에 의해 중단됨.")
         finally:
@@ -522,10 +520,22 @@ def choose_mode():
         end_time = datetime.datetime.now() + datetime.timedelta(hours=hours)
         print(f"⏳ 타이머 차단 모드 실행 중... 종료 시각: {end_time.strftime('%H:%M:%S')}")
 
+        # 동적 sleep 시간 계산 (최소 10초, 최대 60초)
+        total_seconds = hours * 3600
+        if total_seconds < 60:
+            sleep_time = max(10, int(total_seconds / 6))  # 1분 미만이면 10초마다 체크
+        else:
+            sleep_time = 60  # 1분 이상이면 1분마다 체크
+
+        print(f"⏱️ 체크 간격: {sleep_time}초")
+
+        # 한 번만 차단 설정
+        block_websites()
+        current_blocked = True
+
         try:
             while datetime.datetime.now() < end_time:
-                block_websites()
-                time.sleep(60)
+                time.sleep(sleep_time)  # 동적 sleep 시간
         except KeyboardInterrupt:
             print("\n🛑 사용자에 의해 중단됨.")
         finally:
