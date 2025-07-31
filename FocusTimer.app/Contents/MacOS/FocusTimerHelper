@@ -1,0 +1,206 @@
+#!/usr/bin/env python3
+"""
+FocusTimerHelper - 백그라운드 서비스
+집중 모드의 핵심 기능을 백그라운드에서 실행
+"""
+
+import time
+import datetime
+import os
+import sys
+import signal
+import json
+import subprocess
+import threading
+from pathlib import Path
+
+# 앱 경로 설정
+APP_ROOT = Path(__file__).parent.parent
+RESOURCES_PATH = APP_ROOT / "Resources"
+VENV_PATH = APP_ROOT.parent / "focus_timer_env"
+
+# Python 경로 설정
+PYTHON_PATH = VENV_PATH / "bin" / "python"
+
+class FocusTimerHelper:
+    def __init__(self):
+        self.running = True
+        self.focus_mode_active = False
+        self.config = self.load_config()
+        self.setup_signal_handlers()
+
+    def load_config(self):
+        """설정 파일 로드"""
+        config_path = RESOURCES_PATH / "config.json"
+        try:
+            with open(config_path, 'r') as f:
+                return json.load(f)
+        except:
+            return {
+                "focus_mode": {
+                    "default_start_time": "09:00",
+                    "default_end_time": "18:00",
+                    "default_difficulty": 1
+                },
+                "security": {
+                    "enable_file_monitoring": True,
+                    "enable_auto_recovery": True
+                }
+            }
+
+    def setup_signal_handlers(self):
+        """시그널 핸들러 설정"""
+        signal.signal(signal.SIGINT, self.signal_handler)
+        signal.signal(signal.SIGTERM, self.signal_handler)
+
+    def signal_handler(self, sig, frame):
+        """시그널 핸들러"""
+        print(f"[{datetime.datetime.now()}] 종료 신호 수신")
+        self.running = False
+
+    def start_focus_mode(self):
+        """집중 모드 시작"""
+        try:
+            # 기존 Enterprise 로직 실행
+            enterprise_path = Path(__Users/juns/focus_timer/enterprise/focus_timer_enterprise.py
+            subprocess.run([str(PYTHON_PATH), str(enterprise_path)],
+                         capture_output=True, timeout=5)
+            self.focus_mode_active = True
+            print(f"[{datetime.datetime.now()}] 집중 모드 시작됨")
+        except Exception as e:
+            print(f"[{datetime.datetime.now()}] 집중 모드 시작 실패: {e}")
+
+    def stop_focus_mode(self):
+        """집중 모드 중지"""
+        try:
+            # 차단 해제
+            self.unblock_websites()
+            self.focus_mode_active = False
+            print(f"[{datetime.datetime.now()}] 집중 모드 중지됨")
+        except Exception as e:
+            print(f"[{datetime.datetime.now()}] 집중 모드 중지 실패: {e}")
+
+    def block_websites(self):
+        """웹사이트 차단"""
+        try:
+            # hosts 파일에 차단 설정 추가
+            hosts_path = "/etc/hosts"
+            block_entries = [
+                "127.0.0.1 youtube.com",
+                "127.0.0.1 www.youtube.com",
+                "127.0.0.1 facebook.com",
+                "127.0.0.1 www.facebook.com"
+            ]
+
+            with open(hosts_path, 'a') as f:
+                f.write("\n# FocusTimer Block\n")
+                for entry in block_entries:
+                    f.write(f"{entry}\n")
+
+            # DNS 캐시 초기화
+            subprocess.run(["sudo", "dscacheutil", "-flushcache"],
+                         capture_output=True)
+
+            print(f"[{datetime.datetime.now()}] 웹사이트 차단 완료")
+        except Exception as e:
+            print(f"[{datetime.datetime.now()}] 웹사이트 차단 실패: {e}")
+
+    def unblock_websites(self):
+        """웹사이트 차단 해제"""
+        try:
+            # hosts 파일에서 차단 설정 제거
+            hosts_path = "/etc/hosts"
+            with open(hosts_path, 'r') as f:
+                lines = f.readlines()
+
+            # FocusTimer 블록 제거
+            filtered_lines = []
+            skip_block = False
+            for line in lines:
+                if "# FocusTimer Block" in line:
+                    skip_block = True
+                    continue
+                if skip_block and line.strip() == "":
+                    skip_block = False
+                    continue
+                if not skip_block:
+                    filtered_lines.append(line)
+
+            with open(hosts_path, 'w') as f:
+                f.writelines(filtered_lines)
+
+            # DNS 캐시 초기화
+            subprocess.run(["sudo", "dscacheutil", "-flushcache"],
+                         capture_output=True)
+
+            print(f"[{datetime.datetime.now()}] 웹사이트 차단 해제 완료")
+        except Exception as e:
+            print(f"[{datetime.datetime.now()}] 웹사이트 차단 해제 실패: {e}")
+
+    def check_focus_time(self):
+        """집중 시간 체크"""
+        now = datetime.datetime.now()
+        current_time = now.time()
+
+        start_time_str = self.config.get("focus_mode", {}).get("default_start_time", "09:00")
+        end_time_str = self.config.get("focus_mode", {}).get("default_end_time", "18:00")
+
+        try:
+            start_time = datetime.datetime.strptime(start_time_str, "%H:%M").time()
+            end_time = datetime.datetime.strptime(end_time_str, "%H:%M").time()
+
+            should_be_active = start_time <= current_time <= end_time
+
+            if should_be_active and not self.focus_mode_active:
+                self.start_focus_mode()
+            elif not should_be_active and self.focus_mode_active:
+                self.stop_focus_mode()
+
+        except Exception as e:
+            print(f"[{datetime.datetime.now()}] 시간 체크 실패: {e}")
+
+    def monitor_file_changes(self):
+        """파일 변경 모니터링"""
+        if not self.config.get("security", {}).get("enable_file_monitoring", True):
+            return
+
+        try:
+            # hosts 파일 변경 감지
+            hosts_path = "/etc/hosts"
+            if os.path.exists(hosts_path):
+                stat = os.stat(hosts_path)
+                if hasattr(self, 'last_hosts_mtime'):
+                    if stat.st_mtime > self.last_hosts_mtime:
+                        print(f"[{datetime.datetime.now()}] hosts 파일 변경 감지")
+                        if self.focus_mode_active:
+                            self.block_websites()  # 재차단
+                self.last_hosts_mtime = stat.st_mtime
+        except Exception as e:
+            print(f"[{datetime.datetime.now()}] 파일 모니터링 실패: {e}")
+
+    def run(self):
+        """메인 실행 루프"""
+        print(f"[{datetime.datetime.now()}] FocusTimerHelper 시작")
+
+        while self.running:
+            try:
+                # 집중 시간 체크
+                self.check_focus_time()
+
+                # 파일 변경 모니터링
+                self.monitor_file_changes()
+
+                # 1분 대기
+                time.sleep(60)
+
+            except KeyboardInterrupt:
+                break
+            except Exception as e:
+                print(f"[{datetime.datetime.now()}] 오류 발생: {e}")
+                time.sleep(60)
+
+        print(f"[{datetime.datetime.now()}] FocusTimerHelper 종료")
+
+if __name__ == "__main__":
+    helper = FocusTimerHelper()
+    helper.run()

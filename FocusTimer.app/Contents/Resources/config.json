@@ -1,0 +1,213 @@
+{
+    "app_info": {
+        "name": "FocusTimer",
+        "version": "2.0.0",
+        "description": "hybrid 구조 통합 집중 모드 시스템"
+    },
+    "system_paths": {
+        "hosts_file": "/etc/hosts",
+        "redirect_ip": "127.0.0.1",
+        "backup_path": "/Library/Application Support/FocusTimer/hosts_backup",
+        "lock_file": "/Library/Application Support/FocusTimer/focus_timer.lock",
+        "log_path": "/var/log/FocusTimer/focus_timer.log",
+        "pid_file": "/var/run/focus_timer.pid"
+    },
+    "blocked_websites": {
+        "youtube": [
+            "youtube.com",
+            "www.youtube.com",
+            "m.youtube.com",
+            "youtu.be",
+            "youtube-nocookie.com",
+            "www.youtube-nocookie.com",
+            "youtube.googleapis.com",
+            "www.youtube.googleapis.com",
+            "youtubei.googleapis.com",
+            "www.youtubei.googleapis.com",
+            "yt3.ggpht.com",
+            "i.ytimg.com",
+            "ytimg.com",
+            "www.ytimg.com",
+            "googlevideo.com",
+            "www.googlevideo.com",
+            "shorts.youtube.com",
+            "www.shorts.youtube.com"
+        ],
+        "social_media": [
+            "facebook.com",
+            "www.facebook.com",
+            "instagram.com",
+            "www.instagram.com",
+            "twitter.com",
+            "www.twitter.com",
+            "x.com",
+            "www.x.com",
+            "tiktok.com",
+            "www.tiktok.com",
+            "reddit.com",
+            "www.reddit.com"
+        ],
+        "gaming": [
+            "twitch.tv",
+            "www.twitch.tv",
+            "discord.com",
+            "www.discord.com",
+            "steamcommunity.com",
+            "www.steamcommunity.com"
+        ],
+        "entertainment": [
+            "netflix.com",
+            "www.netflix.com",
+            "disneyplus.com",
+            "www.disneyplus.com",
+            "spotify.com",
+            "www.spotify.com"
+        ]
+    },
+    "focus_mode": {
+        "default_start_time": "09:00",
+        "default_end_time": "18:00",
+        "default_difficulty": 1,
+        "max_difficulty": 5,
+        "max_attempts": 3,
+        "auto_restart_browser": true,
+        "force_browser_restart": true
+    },
+    "security": {
+        "enable_system_protection": true,
+        "enable_file_monitoring": true,
+        "enable_firewall_rules": false,
+        "enable_dns_cache_flush": true,
+        "enable_browser_cache_clear": true,
+        "lock_hosts_file": true,
+        "monitor_hosts_changes": true,
+        "enable_auto_recovery": true
+    },
+    "gui_settings": {
+        "window_size": {
+            "width": 900,
+            "height": 700
+        },
+        "theme": "clam",
+        "auto_refresh_interval": 5,
+        "log_lines_to_show": 20,
+        "enable_notifications": true
+    },
+    "browsers": {
+        "supported": [
+            "Google Chrome",
+            "Safari",
+            "Firefox",
+            "Whale",
+            "Microsoft Edge"
+        ],
+        "cache_paths": {
+            "Google Chrome": [
+                "~/Library/Caches/Google/Chrome/Default/Cache",
+                "~/Library/Application Support/Google/Chrome/Default/Cache"
+            ],
+            "Safari": [
+                "~/Library/Caches/com.apple.Safari",
+                "~/Library/Safari/LocalStorage"
+            ]
+        }
+    },
+    "algorithm_challenges": {
+        "difficulty_1": {
+            "name": "기본 사칙연산",
+            "description": "2자리 수 사칙연산",
+            "operations": [
+                "+",
+                "-",
+                "*"
+            ],
+            "number_range": [
+                10,
+                99
+            ]
+        },
+        "difficulty_2": {
+            "name": "3자리 수 연산",
+            "description": "3자리 수 사칙연산",
+            "operations": [
+                "+",
+                "-",
+                "*"
+            ],
+            "number_range": [
+                100,
+                999
+            ]
+        },
+        "difficulty_3": {
+            "name": "복합 연산",
+            "description": "괄호가 포함된 복합 연산",
+            "operations": [
+                "+",
+                "*"
+            ],
+            "number_range": [
+                10,
+                50
+            ]
+        },
+        "difficulty_4": {
+            "name": "피보나치 수열",
+            "description": "피보나치 수열 계산",
+            "sequence_range": [
+                5,
+                10
+            ]
+        },
+        "difficulty_5": {
+            "name": "정렬 알고리즘",
+            "description": "숫자 정렬 후 중간값 찾기",
+            "array_size": 5,
+            "number_range": [
+                1,
+                100
+            ]
+        }
+    },
+    "logging": {
+        "log_level": "INFO",
+        "log_to_file": true,
+        "log_to_console": true,
+        "max_log_size_mb": 10,
+        "log_rotation": true
+    },
+    "installation": {
+        "required_packages": [
+            "watchdog",
+            "psutil"
+        ],
+        "optional_packages": [
+            "flask",
+            "requests"
+        ],
+        "system_requirements": {
+            "os": "macOS",
+            "python_version": "3.13",
+            "homebrew": true
+        }
+    },
+    "license": {
+        "type": "commercial",
+        "features": [
+            "gui_interface",
+            "system_protection",
+            "file_monitoring",
+            "algorithm_challenges",
+            "multi_layer_blocking",
+            "real_time_logging",
+            "statistics_dashboard",
+            "cli_interface",
+            "background_service",
+            "hybrid_configuration"
+        ],
+        "restrictions": [
+            "requires_admin_privileges",
+            "macos_only"
+        ]
+    }
+}

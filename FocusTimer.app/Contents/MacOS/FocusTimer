@@ -1,0 +1,1106 @@
+#!/usr/bin/env python3
+"""
+FocusTimer.app -  집중 모드 시스템(hybrid) v2.0.0
+통합 로직 + 외부 설정 분리 = 최적의 확장성과 유지보수성
+"""
+
+import tkinter as tk
+from tkinter import ttk, messagebox, filedialog
+import threading
+import time
+import datetime
+import os
+import sys
+import signal
+import random
+import subprocess
+import json
+import hashlib
+import fcntl
+import stat
+import socket
+import urllib.request
+import urllib.error
+from pathlib import Path
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
+import psutil
+
+# ----- 앱 경로 설정 -----
+APP_ROOT = Path(__file__).parent.parent
+RESOURCES_PATH = APP_ROOT / "Resources"
+VENV_PATH = APP_ROOT.parent / "focus_timer_env"
+PYTHON_PATH = VENV_PATH / "bin" / "python"
+
+# ----- 설정 관리 클래스 -----
+class ConfigManager:
+    def __init__(self):
+        self.config_path = RESOURCES_PATH / "config.json"
+        self.state_path = "/Library/Application Support/FocusTimer/state.json"
+        self.config = self.load_config()
+        self.ensure_directories()
+
+    def ensure_directories(self):
+        """필요한 디렉토리 생성"""
+        os.makedirs(os.path.dirname(self.state_path), exist_ok=True)
+        os.makedirs("/var/log/FocusTimer", exist_ok=True)
+
+    def load_config(self):
+        """설정 파일 로드"""
+        try:
+            if self.config_path.exists():
+                with open(self.config_path, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+            else:
+                return self.get_default_config()
+        except Exception as e:
+            print(f"설정 로드 실패: {e}")
+            return self.get_default_config()
+
+    def get_default_config(self):
+        """기본 설정 반환"""
+        return {
+            "app_info": {
+                "name": "FocusTimer",
+                "version": "2.0.0",
+                "description": "Hybrid 구조 집중 모드 시스템"
+            },
+            "system_paths": {
+                "hosts_file": "/etc/hosts",
+                "redirect_ip": "127.0.0.1",
+                "backup_path": "/Library/Application Support/FocusTimer/hosts_backup",
+                "lock_file": "/Library/Application Support/FocusTimer/focus_timer.lock",
+                "log_path": "/var/log/FocusTimer/focus_timer.log",
+                "pid_file": "/var/run/focus_timer.pid"
+            },
+            "blocked_websites": {
+                "youtube": [
+                    "youtube.com", "www.youtube.com", "m.youtube.com", "youtu.be",
+                    "youtube-nocookie.com", "www.youtube-nocookie.com",
+                    "youtube.googleapis.com", "www.youtube.googleapis.com",
+                    "youtubei.googleapis.com", "www.youtubei.googleapis.com",
+                    "yt3.ggpht.com", "i.ytimg.com", "ytimg.com", "www.ytimg.com",
+                    "googlevideo.com", "www.googlevideo.com",
+                    "shorts.youtube.com", "www.shorts.youtube.com"
+                ],
+                "social_media": [
+                    "facebook.com", "www.facebook.com", "instagram.com", "www.instagram.com",
+                    "twitter.com", "www.twitter.com", "x.com", "www.x.com",
+                    "tiktok.com", "www.tiktok.com", "reddit.com", "www.reddit.com"
+                ],
+                "gaming": [
+                    "twitch.tv", "www.twitch.tv", "discord.com", "www.discord.com",
+                    "steamcommunity.com", "www.steamcommunity.com"
+                ],
+                "entertainment": [
+                    "netflix.com", "www.netflix.com", "disneyplus.com", "www.disneyplus.com",
+                    "spotify.com", "www.spotify.com"
+                ]
+            },
+            "focus_mode": {
+                "default_start_time": "09:00",
+                "default_end_time": "18:00",
+                "default_difficulty": 1,
+                "max_difficulty": 5,
+                "max_attempts": 3,
+                "auto_restart_browser": True,
+                "force_browser_restart": True
+            },
+            "security": {
+                "enable_system_protection": True,
+                "enable_file_monitoring": True,
+                "enable_firewall_rules": False,
+                "enable_dns_cache_flush": True,
+                "enable_browser_cache_clear": True,
+                "lock_hosts_file": True,
+                "monitor_hosts_changes": True,
+                "enable_auto_recovery": True
+            },
+            "gui_settings": {
+                "window_size": {
+                    "width": 900,
+                    "height": 700
+                },
+                "theme": "clam",
+                "auto_refresh_interval": 5,
+                "log_lines_to_show": 20,
+                "enable_notifications": True
+            },
+            "browsers": {
+                "supported": [
+                    "Google Chrome", "Safari", "Firefox", "Whale", "Microsoft Edge"
+                ],
+                "cache_paths": {
+                    "Google Chrome": [
+                        "~/Library/Caches/Google/Chrome/Default/Cache",
+                        "~/Library/Application Support/Google/Chrome/Default/Cache"
+                    ],
+                    "Safari": [
+                        "~/Library/Caches/com.apple.Safari",
+                        "~/Library/Safari/LocalStorage"
+                    ]
+                }
+            }
+        }
+
+    def get(self, key_path, default=None):
+        """점 표기법으로 설정 값 가져오기"""
+        keys = key_path.split('.')
+        value = self.config
+        try:
+            for key in keys:
+                value = value[key]
+            return value
+        except (KeyError, TypeError):
+            return default
+
+    def save_config(self):
+        """설정 파일 저장"""
+        try:
+            with open(self.config_path, 'w', encoding='utf-8') as f:
+                json.dump(self.config, f, indent=2, ensure_ascii=False)
+        except Exception as e:
+            print(f"설정 저장 실패: {e}")
+
+    def get_all_blocked_websites(self):
+        """모든 차단할 웹사이트 목록 반환"""
+        websites = []
+        for category, sites in self.get("blocked_websites", {}).items():
+            websites.extend(sites)
+        return websites
+
+# ----- 전역 설정 인스턴스 -----
+config_manager = ConfigManager()
+
+# ----- 전역 상태 클래스 -----
+class FocusTimerState:
+    def __init__(self):
+        self.is_focus_mode = False
+        self.focus_start_time = None
+        self.focus_end_time = None
+        self.is_blocked = False
+        self.hosts_hash = None
+        self.last_check = None
+        self.block_count = 0
+        self.bypass_attempts = 0
+        self.difficulty_level = 1
+        self.failed_attempts = 0
+
+# 전역 인스턴스
+state = FocusTimerState()
+challenge = None
+
+# ----- 로깅 시스템 -----
+class Logger:
+    def __init__(self, log_file):
+        self.log_file = log_file
+        self.ensure_log_directory()
+
+    def ensure_log_directory(self):
+        os.makedirs(os.path.dirname(self.log_file), exist_ok=True)
+
+    def log(self, level, message):
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        log_entry = f"[{timestamp}] [{level}] {message}"
+
+        # 콘솔 출력
+        print(log_entry)
+
+        # 파일 로깅
+        try:
+            with open(self.log_file, "a", encoding="utf-8") as f:
+                f.write(log_entry + "\n")
+        except:
+            pass
+
+logger = Logger(config_manager.get("system_paths.log_path"))
+
+# ----- 시스템 레벨 보호 -----
+class SystemProtection:
+    def __init__(self):
+        self.original_hosts_permissions = None
+        self.firewall_rules = []
+
+    def backup_hosts_permissions(self):
+        """hosts 파일 원본 권한 백업"""
+        try:
+            hosts_path = config_manager.get("system_paths.hosts_file")
+            stat_info = os.stat(hosts_path)
+            self.original_hosts_permissions = stat_info.st_mode
+            logger.log("INFO", "hosts 파일 권한 백업 완료")
+        except Exception as e:
+            logger.log("ERROR", f"hosts 파일 권한 백업 실패: {e}")
+
+    def lock_hosts_file(self):
+        """hosts 파일을 읽기 전용으로 잠금"""
+        try:
+            hosts_path = config_manager.get("system_paths.hosts_file")
+            os.chmod(hosts_path, stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH)  # 444
+            logger.log("INFO", "hosts 파일 잠금 완료")
+        except Exception as e:
+            logger.log("ERROR", f"hosts 파일 잠금 실패: {e}")
+
+    def unlock_hosts_file(self):
+        """hosts 파일 잠금 해제"""
+        try:
+            hosts_path = config_manager.get("system_paths.hosts_file")
+            if self.original_hosts_permissions:
+                os.chmod(hosts_path, self.original_hosts_permissions)
+            else:
+                os.chmod(hosts_path, stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH)  # 644
+            logger.log("INFO", "hosts 파일 잠금 해제 완료")
+        except Exception as e:
+            logger.log("ERROR", f"hosts 파일 잠금 해제 실패: {e}")
+
+# ----- 지속적 모니터링 -----
+class HostsFileMonitor(FileSystemEventHandler):
+    def __init__(self, focus_timer):
+        self.focus_timer = focus_timer
+        self.last_modified = 0
+
+    def on_modified(self, event):
+        hosts_path = config_manager.get("system_paths.hosts_file")
+        if event.src_path == hosts_path:
+            current_time = time.time()
+            if current_time - self.last_modified > 1:  # 중복 이벤트 방지
+                self.last_modified = current_time
+                logger.log("WARNING", "hosts 파일 변경 감지됨")
+                self.focus_timer.handle_hosts_modification()
+
+class FocusTimerMonitor:
+    def __init__(self):
+        self.observer = None
+        self.monitoring = False
+        self.system_protection = SystemProtection()
+
+    def start_monitoring(self):
+        """파일 시스템 모니터링 시작"""
+        if not config_manager.get("security.enable_file_monitoring", True):
+            return
+
+        try:
+            self.observer = Observer()
+            event_handler = HostsFileMonitor(self)
+            self.observer.schedule(event_handler, path="/etc", recursive=False)
+            self.observer.start()
+            self.monitoring = True
+            logger.log("INFO", "파일 시스템 모니터링 시작")
+        except Exception as e:
+            logger.log("ERROR", f"모니터링 시작 실패: {e}")
+
+    def stop_monitoring(self):
+        """파일 시스템 모니터링 중지"""
+        if self.observer:
+            self.observer.stop()
+            self.observer.join()
+            self.monitoring = False
+            logger.log("INFO", "파일 시스템 모니터링 중지")
+
+    def handle_hosts_modification(self):
+        """hosts 파일 수정 처리"""
+        if state.is_focus_mode and state.is_blocked:
+            logger.log("WARNING", "집중 모드 중 hosts 파일 수정 시도 감지")
+            state.bypass_attempts += 1
+
+            # 자동으로 차단 재적용
+            self.reapply_blocking()
+
+            # 보안 강화
+            self.enhance_security()
+
+    def reapply_blocking(self):
+        """차단 재적용"""
+        try:
+            # hosts 파일 잠금 해제
+            self.system_protection.unlock_hosts_file()
+
+            # 차단 설정 재적용
+            block_websites()
+
+            # hosts 파일 다시 잠금
+            if config_manager.get("security.lock_hosts_file", True):
+                self.system_protection.lock_hosts_file()
+
+            # DNS 캐시 초기화
+            if config_manager.get("security.enable_dns_cache_flush", True):
+                self.flush_dns_cache()
+
+            logger.log("INFO", "차단 재적용 완료")
+
+        except Exception as e:
+            logger.log("ERROR", f"차단 재적용 실패: {e}")
+
+    def enhance_security(self):
+        """보안 강화"""
+        try:
+            # 브라우저 강제 재시작
+            if config_manager.get("focus_mode.force_browser_restart", True):
+                self.restart_browsers()
+
+            # 시스템 알림
+            self.send_system_notification("보안 경고", "집중 모드 중 차단 해제 시도가 감지되었습니다.")
+
+            logger.log("INFO", "보안 강화 완료")
+
+        except Exception as e:
+            logger.log("ERROR", f"보안 강화 실패: {e}")
+
+    def flush_dns_cache(self):
+        """DNS 캐시 초기화"""
+        try:
+            subprocess.run(["sudo", "dscacheutil", "-flushcache"], check=True)
+            subprocess.run(["sudo", "killall", "-HUP", "mDNSResponder"], check=True)
+            logger.log("INFO", "DNS 캐시 초기화 완료")
+        except Exception as e:
+            logger.log("ERROR", f"DNS 캐시 초기화 실패: {e}")
+
+    def restart_browsers(self):
+        """브라우저 강제 재시작"""
+        browsers = config_manager.get("browsers.supported", [])
+
+        for browser in browsers:
+            try:
+                # 브라우저 종료
+                subprocess.run(["osascript", "-e", f'quit app "{browser}"'],
+                             capture_output=True, timeout=5)
+                time.sleep(2)
+
+                # 강제 종료
+                subprocess.run(["pkill", "-f", browser], capture_output=True)
+                time.sleep(1)
+
+                # 재시작
+                subprocess.run(["open", "-a", browser], capture_output=True)
+                time.sleep(3)
+
+                logger.log("INFO", f"{browser} 재시작 완료")
+
+            except Exception as e:
+                logger.log("ERROR", f"{browser} 재시작 실패: {e}")
+
+    def send_system_notification(self, title, message):
+        """시스템 알림 전송"""
+        try:
+            subprocess.run([
+                "osascript", "-e",
+                f'display notification "{message}" with title "{title}"'
+            ], capture_output=True)
+        except:
+            pass
+
+# ----- 알고리즘 문제 시스템 -----
+class AlgorithmChallenge:
+    def __init__(self):
+        self.difficulty_level = config_manager.get("focus_mode.default_difficulty", 1)
+        self.max_attempts = config_manager.get("focus_mode.max_attempts", 3)
+        self.failed_attempts = 0
+
+    def generate_problem(self):
+        """난이도에 따른 알고리즘 문제 생성"""
+        if self.difficulty_level == 1:
+            # 기본 사칙연산
+            a = random.randint(10, 99)
+            b = random.randint(10, 99)
+            operation = random.choice(["+", "-", "*"])
+
+            if operation == "+":
+                answer = a + b
+            elif operation == "-":
+                answer = a - b
+            else:
+                answer = a * b
+
+            return f"{a} {operation} {b} = ?", answer
+
+        elif self.difficulty_level == 2:
+            # 3자리 수 연산
+            a = random.randint(100, 999)
+            b = random.randint(10, 99)
+            operation = random.choice(["+", "-", "*"])
+
+            if operation == "+":
+                answer = a + b
+            elif operation == "-":
+                answer = a - b
+            else:
+                answer = a * b
+
+            return f"{a} {operation} {b} = ?", answer
+
+        elif self.difficulty_level == 3:
+            # 복합 연산
+            a = random.randint(10, 50)
+            b = random.randint(5, 20)
+            c = random.randint(2, 10)
+
+            answer = (a + b) * c
+            return f"({a} + {b}) × {c} = ?", answer
+
+        elif self.difficulty_level == 4:
+            # 피보나치 수열
+            n = random.randint(5, 10)
+            fib_sequence = [0, 1]
+            for i in range(2, n + 1):
+                fib_sequence.append(fib_sequence[i-1] + fib_sequence[i-2])
+            answer = fib_sequence[n]
+            return f"피보나치 수열의 {n}번째 수는? (F(0)=0, F(1)=1)", answer
+
+        else:  # 난이도 5
+            # 정렬 알고리즘 문제
+            numbers = [random.randint(1, 100) for _ in range(5)]
+            sorted_numbers = sorted(numbers)
+            answer = sorted_numbers[2]  # 중간값
+            return f"숫자 {numbers}를 오름차순으로 정렬했을 때 중간값은?", answer
+
+    def increase_difficulty(self):
+        """난이도 증가"""
+        max_difficulty = config_manager.get("focus_mode.max_difficulty", 5)
+        if self.difficulty_level < max_difficulty:
+            self.difficulty_level += 1
+            logger.log("INFO", f"난이도가 {self.difficulty_level}로 증가")
+
+    def ask_challenge(self):
+        """알고리즘 문제 출제 및 정답 확인"""
+        logger.log("INFO", f"난이도 {self.difficulty_level} 문제 출제")
+
+        attempts = 0
+        while attempts < self.max_attempts:
+            problem, answer = self.generate_problem()
+            print(f"\n📝 문제: {problem}")
+
+            try:
+                user_input = input("답: ").strip()
+
+                if user_input.isdigit():
+                    user_answer = int(user_input)
+                else:
+                    print("⚠️ 숫자를 입력해주세요.")
+                    attempts += 1
+                    continue
+
+                if user_answer == answer:
+                    logger.log("INFO", "문제 해결 성공")
+                    return True
+                else:
+                    attempts += 1
+                    remaining = self.max_attempts - attempts
+                    print(f"❌ 오답입니다. 정답: {answer}")
+                    if remaining > 0:
+                        print(f"🔄 남은 시도: {remaining}")
+                    else:
+                        print("🚫 모든 시도 실패!")
+
+            except KeyboardInterrupt:
+                print("\n⚠️ 문제 풀이를 중단할 수 없습니다!")
+                attempts += 1
+            except:
+                print("⚠️ 올바른 숫자를 입력해주세요.")
+                attempts += 1
+
+        # 모든 시도 실패
+        self.failed_attempts += 1
+        if self.failed_attempts >= 2:
+            self.increase_difficulty()
+            self.failed_attempts = 0
+
+        logger.log("WARNING", "문제 해결 실패 - 종료 거부")
+        return False
+
+# ----- 다중 차단 레이어 -----
+def block_websites():
+    """다중 레이어 차단 적용"""
+    try:
+        # 1. hosts 파일 차단
+        block_hosts_file()
+
+        # 2. DNS 캐시 초기화
+        if config_manager.get("security.enable_dns_cache_flush", True):
+            flush_dns_cache()
+
+        # 3. 브라우저 캐시 초기화
+        if config_manager.get("security.enable_browser_cache_clear", True):
+            clear_browser_cache()
+
+        state.is_blocked = True
+        state.block_count += 1
+        logger.log("INFO", "다중 레이어 차단 적용 완료")
+
+    except Exception as e:
+        logger.log("ERROR", f"차단 적용 실패: {e}")
+
+def unblock_websites():
+    """다중 레이어 차단 해제"""
+    try:
+        # 1. hosts 파일 복구
+        restore_hosts_file()
+
+        # 2. DNS 캐시 초기화
+        if config_manager.get("security.enable_dns_cache_flush", True):
+            flush_dns_cache()
+
+        state.is_blocked = False
+        logger.log("INFO", "다중 레이어 차단 해제 완료")
+
+    except Exception as e:
+        logger.log("ERROR", f"차단 해제 실패: {e}")
+
+def block_hosts_file():
+    """hosts 파일에 차단 설정 추가"""
+    try:
+        hosts_path = config_manager.get("system_paths.hosts_file")
+        redirect_ip = config_manager.get("system_paths.redirect_ip")
+        websites = config_manager.get_all_blocked_websites()
+
+        with open(hosts_path, "r+") as file:
+            lines = file.readlines()
+
+            # FocusTimer 블록 시작/끝 마커
+            block_start = "# FocusTimer Block Start\n"
+            block_end = "# FocusTimer Block End\n"
+
+            # 기존 블록 제거
+            start_idx = -1
+            end_idx = -1
+            for i, line in enumerate(lines):
+                if line == block_start:
+                    start_idx = i
+                elif line == block_end:
+                    end_idx = i
+                    break
+
+            if start_idx != -1 and end_idx != -1:
+                lines = lines[:start_idx] + lines[end_idx + 1:]
+
+            # 새로운 차단 설정 추가
+            new_entries = [block_start]
+            for site in websites:
+                new_entries.append(f"{redirect_ip} {site}\n")
+            new_entries.append(block_end)
+
+            # 파일에 쓰기
+            file.seek(0)
+            file.writelines(lines + new_entries)
+            file.truncate()
+            file.flush()
+            os.fsync(file.fileno())
+
+            logger.log("INFO", "hosts 파일 차단 설정 완료")
+
+    except Exception as e:
+        logger.log("ERROR", f"hosts 파일 차단 실패: {e}")
+
+def restore_hosts_file():
+    """hosts 파일에서 차단 설정 제거"""
+    try:
+        hosts_path = config_manager.get("system_paths.hosts_file")
+
+        with open(hosts_path, "r+") as file:
+            lines = file.readlines()
+
+            block_start = "# FocusTimer Block Start\n"
+            block_end = "# FocusTimer Block End\n"
+
+            start_idx = -1
+            end_idx = -1
+            for i, line in enumerate(lines):
+                if line == block_start:
+                    start_idx = i
+                elif line == block_end:
+                    end_idx = i
+                    break
+
+            if start_idx != -1 and end_idx != -1:
+                new_lines = lines[:start_idx] + lines[end_idx + 1:]
+                file.seek(0)
+                file.writelines(new_lines)
+                file.truncate()
+                file.flush()
+                os.fsync(file.fileno())
+
+                logger.log("INFO", "hosts 파일 복구 완료")
+            else:
+                logger.log("INFO", "차단 설정이 없습니다.")
+
+    except Exception as e:
+        logger.log("ERROR", f"hosts 파일 복구 실패: {e}")
+
+def flush_dns_cache():
+    """DNS 캐시 초기화"""
+    try:
+        subprocess.run(["sudo", "dscacheutil", "-flushcache"], check=True)
+        subprocess.run(["sudo", "killall", "-HUP", "mDNSResponder"], check=True)
+        logger.log("INFO", "DNS 캐시 초기화 완료")
+    except Exception as e:
+        logger.log("ERROR", f"DNS 캐시 초기화 실패: {e}")
+
+def clear_browser_cache():
+    """브라우저 캐시 초기화"""
+    browsers = config_manager.get("browsers.supported", [])
+    cache_paths = config_manager.get("browsers.cache_paths", {})
+
+    for browser in browsers:
+        try:
+            if browser in cache_paths:
+                for path in cache_paths[browser]:
+                    expanded_path = os.path.expanduser(path)
+                    if os.path.exists(expanded_path):
+                        subprocess.run(["rm", "-rf", f"{expanded_path}/*"], capture_output=True)
+
+            logger.log("INFO", f"{browser} 캐시 초기화 완료")
+
+        except Exception as e:
+            logger.log("ERROR", f"{browser} 캐시 초기화 실패: {e}")
+
+# ----- 상태 관리 -----
+def save_state():
+    """상태 저장"""
+    try:
+        state_data = {
+            "is_focus_mode": state.is_focus_mode,
+            "focus_start_time": state.focus_start_time.isoformat() if state.focus_start_time else None,
+            "focus_end_time": state.focus_end_time.isoformat() if state.focus_end_time else None,
+            "is_blocked": state.is_blocked,
+            "block_count": state.block_count,
+            "bypass_attempts": state.bypass_attempts,
+            "difficulty_level": challenge.difficulty_level if challenge else 1,
+            "failed_attempts": challenge.failed_attempts if challenge else 0,
+            "last_check": datetime.datetime.now().isoformat()
+        }
+
+        with open(config_manager.state_path, "w") as f:
+            json.dump(state_data, f, indent=2)
+
+        logger.log("INFO", "상태 저장 완료")
+
+    except Exception as e:
+        logger.log("ERROR", f"상태 저장 실패: {e}")
+
+def load_state():
+    """상태 불러오기"""
+    try:
+        if os.path.exists(config_manager.state_path):
+            with open(config_manager.state_path, "r") as f:
+                state_data = json.load(f)
+
+            state.is_focus_mode = state_data.get("is_focus_mode", False)
+            state.is_blocked = state_data.get("is_blocked", False)
+            state.block_count = state_data.get("block_count", 0)
+            state.bypass_attempts = state_data.get("bypass_attempts", 0)
+
+            if state_data.get("focus_start_time"):
+                state.focus_start_time = datetime.datetime.fromisoformat(state_data["focus_start_time"])
+            if state_data.get("focus_end_time"):
+                state.focus_end_time = datetime.datetime.fromisoformat(state_data["focus_end_time"])
+
+            if challenge:
+                challenge.difficulty_level = state_data.get("difficulty_level", 1)
+                challenge.failed_attempts = state_data.get("failed_attempts", 0)
+
+            logger.log("INFO", "상태 불러오기 완료")
+
+    except Exception as e:
+        logger.log("ERROR", f"상태 불러오기 실패: {e}")
+
+# ----- GUI 애플리케이션 -----
+class FocusTimerApp:
+    def __init__(self):
+        global challenge
+        challenge = AlgorithmChallenge()
+        self.monitor = FocusTimerMonitor()
+        self.running = False
+        self.monitor_thread = None
+
+        # GUI 초기화
+        self.root = tk.Tk()
+        self.setup_gui()
+
+        # 상태 불러오기
+        load_state()
+
+        # 시스템 보호 초기화
+        if config_manager.get("security.enable_system_protection", True):
+            self.monitor.system_protection.backup_hosts_permissions()
+
+    def setup_gui(self):
+        """GUI 설정"""
+        app_name = config_manager.get("app_info.name", "FocusTimer")
+        app_version = config_manager.get("app_info.version", "2.0.0")
+
+        self.root.title(f"{app_name} v{app_version}")
+
+        window_size = config_manager.get("gui_settings.window_size", {"width": 900, "height": 700})
+        self.root.geometry(f"{window_size['width']}x{window_size['height']}")
+        self.root.resizable(True, True)
+
+        # 스타일 설정
+        style = ttk.Style()
+        theme = config_manager.get("gui_settings.theme", "clam")
+        style.theme_use(theme)
+
+        # 메뉴바 설정
+        self.setup_menu()
+
+        # 메인 프레임
+        main_frame = ttk.Frame(self.root, padding="10")
+        main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+
+        # 제목
+        title_label = ttk.Label(main_frame, text=f"⏰ {app_name}",
+                               font=('Helvetica', 20, 'bold'))
+        title_label.grid(row=0, column=0, columnspan=2, pady=(0, 20))
+
+        # 탭 생성
+        self.notebook = ttk.Notebook(main_frame)
+        self.notebook.grid(row=1, column=0, columnspan=2, sticky=(tk.W, tk.E, tk.N, tk.S))
+
+        # 탭 추가
+        self.create_dashboard_tab()
+        self.create_timer_tab()
+        self.create_settings_tab()
+        self.create_stats_tab()
+
+        # 상태바
+        self.status_var = tk.StringVar(value="준비됨")
+        status_bar = ttk.Label(main_frame, textvariable=self.status_var,
+                              relief=tk.SUNKEN, anchor=tk.W)
+        status_bar.grid(row=2, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(10, 0))
+
+        # 그리드 가중치
+        self.root.columnconfigure(0, weight=1)
+        self.root.rowconfigure(0, weight=1)
+        main_frame.columnconfigure(0, weight=1)
+        main_frame.rowconfigure(1, weight=1)
+
+    def setup_menu(self):
+        """메뉴바 설정"""
+        menubar = tk.Menu(self.root)
+        self.root.config(menu=menubar)
+
+        # 파일 메뉴
+        file_menu = tk.Menu(menubar, tearoff=0)
+        menubar.add_cascade(label="파일", menu=file_menu)
+        file_menu.add_command(label="설정 내보내기", command=self.export_config)
+        file_menu.add_command(label="설정 가져오기", command=self.import_config)
+        file_menu.add_separator()
+        file_menu.add_command(label="종료", command=self.quit_app)
+
+        # 도구 메뉴
+        tools_menu = tk.Menu(menubar, tearoff=0)
+        menubar.add_cascade(label="도구", menu=tools_menu)
+        tools_menu.add_command(label="CLI 모드", command=self.open_cli)
+        tools_menu.add_command(label="웹 인터페이스", command=self.open_web)
+        tools_menu.add_separator()
+        tools_menu.add_command(label="로그 보기", command=self.view_logs)
+
+        # 도움말 메뉴
+        help_menu = tk.Menu(menubar, tearoff=0)
+        menubar.add_cascade(label="도움말", menu=help_menu)
+        help_menu.add_command(label="사용법", command=self.show_help)
+        help_menu.add_command(label="정보", command=self.show_about)
+
+    def create_dashboard_tab(self):
+        """대시보드 탭"""
+        dashboard_frame = ttk.Frame(self.notebook, padding="10")
+        self.notebook.add(dashboard_frame, text="📊 대시보드")
+
+        # 현재 상태
+        status_frame = ttk.LabelFrame(dashboard_frame, text="현재 상태", padding="10")
+        status_frame.grid(row=0, column=0, sticky=(tk.W, tk.E), pady=(0, 10))
+
+        self.status_label = ttk.Label(status_frame, text="집중 모드 비활성화",
+                                     font=('Helvetica', 14))
+        self.status_label.grid(row=0, column=0, sticky=tk.W)
+
+        # 빠른 액션
+        action_frame = ttk.LabelFrame(dashboard_frame, text="빠른 액션", padding="10")
+        action_frame.grid(row=1, column=0, sticky=(tk.W, tk.E), pady=(0, 10))
+
+        ttk.Button(action_frame, text="🚀 집중 모드 시작",
+                  command=self.start_focus_mode).grid(row=0, column=0, padx=(0, 10))
+        ttk.Button(action_frame, text="⏹️ 집중 모드 중지",
+                  command=self.stop_focus_mode).grid(row=0, column=1, padx=(0, 10))
+        ttk.Button(action_frame, text="🔒 즉시 차단",
+                  command=self.block_now).grid(row=0, column=2, padx=(0, 10))
+        ttk.Button(action_frame, text="🔓 즉시 해제",
+                  command=self.unblock_now).grid(row=0, column=3)
+
+    def create_timer_tab(self):
+        """타이머 설정 탭"""
+        timer_frame = ttk.Frame(self.notebook, padding="10")
+        self.notebook.add(timer_frame, text="⏰ 타이머")
+
+        # 시간 설정
+        time_frame = ttk.LabelFrame(timer_frame, text="시간 설정", padding="10")
+        time_frame.grid(row=0, column=0, sticky=(tk.W, tk.E), pady=(0, 10))
+
+        ttk.Label(time_frame, text="시작 시간:").grid(row=0, column=0, sticky=tk.W)
+        self.start_time_var = tk.StringVar(value=config_manager.get("focus_mode.default_start_time", "09:00"))
+        ttk.Entry(time_frame, textvariable=self.start_time_var, width=10).grid(row=0, column=1, padx=(10, 0))
+
+        ttk.Label(time_frame, text="종료 시간:").grid(row=1, column=0, sticky=tk.W, pady=(5, 0))
+        self.end_time_var = tk.StringVar(value=config_manager.get("focus_mode.default_end_time", "18:00"))
+        ttk.Entry(time_frame, textvariable=self.end_time_var, width=10).grid(row=1, column=1, padx=(10, 0), pady=(5, 0))
+
+        # 난이도 설정
+        difficulty_frame = ttk.LabelFrame(timer_frame, text="알고리즘 문제 난이도", padding="10")
+        difficulty_frame.grid(row=1, column=0, sticky=(tk.W, tk.E), pady=(0, 10))
+
+        self.difficulty_var = tk.IntVar(value=config_manager.get("focus_mode.default_difficulty", 1))
+        max_difficulty = config_manager.get("focus_mode.max_difficulty", 5)
+        for i in range(1, max_difficulty + 1):
+            ttk.Radiobutton(difficulty_frame, text=f"난이도 {i}",
+                           variable=self.difficulty_var, value=i).grid(row=0, column=i-1, padx=(0, 10))
+
+    def create_settings_tab(self):
+        """설정 탭"""
+        settings_frame = ttk.Frame(self.notebook, padding="10")
+        self.notebook.add(settings_frame, text="⚙️ 설정")
+
+        # 일반 설정
+        general_frame = ttk.LabelFrame(settings_frame, text="일반 설정", padding="10")
+        general_frame.grid(row=0, column=0, sticky=(tk.W, tk.E), pady=(0, 10))
+
+        self.auto_start_var = tk.BooleanVar(value=True)
+        ttk.Checkbutton(general_frame, text="시스템 시작 시 자동 실행",
+                       variable=self.auto_start_var).grid(row=0, column=0, sticky=tk.W)
+
+        self.browser_restart_var = tk.BooleanVar(value=config_manager.get("focus_mode.auto_restart_browser", True))
+        ttk.Checkbutton(general_frame, text="집중 모드 시작 시 브라우저 재시작",
+                       variable=self.browser_restart_var).grid(row=1, column=0, sticky=tk.W, pady=(5, 0))
+
+        # 보안 설정
+        security_frame = ttk.LabelFrame(settings_frame, text="보안 설정", padding="10")
+        security_frame.grid(row=1, column=0, sticky=(tk.W, tk.E), pady=(0, 10))
+
+        self.file_monitoring_var = tk.BooleanVar(value=config_manager.get("security.enable_file_monitoring", True))
+        ttk.Checkbutton(security_frame, text="파일 모니터링 활성화",
+                       variable=self.file_monitoring_var).grid(row=0, column=0, sticky=tk.W)
+
+        self.auto_recovery_var = tk.BooleanVar(value=config_manager.get("security.enable_auto_recovery", True))
+        ttk.Checkbutton(security_frame, text="자동 복구 활성화",
+                       variable=self.auto_recovery_var).grid(row=1, column=0, sticky=tk.W, pady=(5, 0))
+
+    def create_stats_tab(self):
+        """통계 탭"""
+        stats_frame = ttk.Frame(self.notebook, padding="10")
+        self.notebook.add(stats_frame, text="📈 통계")
+
+        # 통계 정보
+        stats_info_frame = ttk.LabelFrame(stats_frame, text="사용 통계", padding="10")
+        stats_info_frame.grid(row=0, column=0, sticky=(tk.W, tk.E), pady=(0, 10))
+
+        self.total_focus_time_var = tk.StringVar(value="0시간")
+        ttk.Label(stats_info_frame, text="총 집중 시간:").grid(row=0, column=0, sticky=tk.W)
+        ttk.Label(stats_info_frame, textvariable=self.total_focus_time_var,
+                 font=('Helvetica', 12, 'bold')).grid(row=0, column=1, padx=(10, 0))
+
+        self.block_count_var = tk.StringVar(value="0회")
+        ttk.Label(stats_info_frame, text="차단 횟수:").grid(row=1, column=0, sticky=tk.W, pady=(5, 0))
+        ttk.Label(stats_info_frame, textvariable=self.block_count_var,
+                 font=('Helvetica', 12, 'bold')).grid(row=1, column=1, padx=(10, 0), pady=(5, 0))
+
+        self.bypass_attempts_var = tk.StringVar(value="0회")
+        ttk.Label(stats_info_frame, text="우회 시도:").grid(row=2, column=0, sticky=tk.W, pady=(5, 0))
+        ttk.Label(stats_info_frame, textvariable=self.bypass_attempts_var,
+                 font=('Helvetica', 12, 'bold')).grid(row=2, column=1, padx=(10, 0), pady=(5, 0))
+
+    def start_focus_mode(self):
+        """집중 모드 시작"""
+        try:
+            # 시간 파싱
+            start_time = self.start_time_var.get()
+            end_time = self.end_time_var.get()
+
+            start_hour, start_minute = map(int, start_time.split(':'))
+            end_hour, end_minute = map(int, end_time.split(':'))
+
+            # 상태 설정
+            now = datetime.datetime.now()
+            state.focus_start_time = now.replace(hour=start_hour, minute=start_minute, second=0, microsecond=0)
+            state.focus_end_time = now.replace(hour=end_hour, minute=end_minute, second=0, microsecond=0)
+            state.is_focus_mode = True
+
+            if challenge:
+                challenge.difficulty_level = self.difficulty_var.get()
+
+            save_state()
+
+            # 모니터링 시작
+            if not self.running:
+                self.start_monitoring()
+
+            self.status_label.config(text="집중 모드 활성화")
+            self.status_var.set("집중 모드 시작됨")
+            messagebox.showinfo("성공", "집중 모드가 시작되었습니다!")
+
+        except Exception as e:
+            messagebox.showerror("오류", f"집중 모드 시작 실패: {e}")
+
+    def stop_focus_mode(self):
+        """집중 모드 중지"""
+        try:
+            state.is_focus_mode = False
+            state.is_blocked = False
+
+            # 차단 해제
+            unblock_websites()
+
+            save_state()
+
+            self.status_label.config(text="집중 모드 비활성화")
+            self.status_var.set("집중 모드 중지됨")
+            messagebox.showinfo("성공", "집중 모드가 중지되었습니다!")
+
+        except Exception as e:
+            messagebox.showerror("오류", f"집중 모드 중지 실패: {e}")
+
+    def block_now(self):
+        """즉시 차단"""
+        try:
+            block_websites()
+            messagebox.showinfo("알림", "웹사이트가 즉시 차단되었습니다!")
+        except Exception as e:
+            messagebox.showerror("오류", f"즉시 차단 실패: {e}")
+
+    def unblock_now(self):
+        """즉시 해제"""
+        try:
+            unblock_websites()
+            messagebox.showinfo("알림", "웹사이트 차단이 해제되었습니다!")
+        except Exception as e:
+            messagebox.showerror("오류", f"즉시 해제 실패: {e}")
+
+    def start_monitoring(self):
+        """모니터링 시작"""
+        if not self.running:
+            self.running = True
+            self.monitor.start_monitoring()
+
+            # 모니터링 스레드 시작
+            self.monitor_thread = threading.Thread(target=self.monitoring_loop, daemon=True)
+            self.monitor_thread.start()
+
+    def monitoring_loop(self):
+        """모니터링 루프"""
+        while self.running:
+            try:
+                self.check_focus_time()
+                time.sleep(60)  # 1분마다 체크
+            except Exception as e:
+                logger.log("ERROR", f"모니터링 루프 오류: {e}")
+
+    def check_focus_time(self):
+        """집중 시간 체크"""
+        if not state.is_focus_mode:
+            return
+
+        now = datetime.datetime.now()
+        current_time = now.time()
+
+        if state.focus_start_time and state.focus_end_time:
+            start_time = state.focus_start_time.time()
+            end_time = state.focus_end_time.time()
+
+            # 시간대 비교
+            if start_time <= end_time:
+                should_be_blocked = start_time <= current_time <= end_time
+            else:
+                should_be_blocked = current_time >= start_time or current_time <= end_time
+
+            # 상태 변경 처리
+            if state.is_blocked != should_be_blocked:
+                if should_be_blocked:
+                    block_websites()
+                    self.monitor.system_protection.lock_hosts_file()
+                    logger.log("INFO", "집중 모드 시작 - 차단 적용")
+                else:
+                    unblock_websites()
+                    self.monitor.system_protection.unlock_hosts_file()
+                    logger.log("INFO", "집중 모드 종료 - 차단 해제")
+
+                state.is_blocked = should_be_blocked
+                save_state()
+
+    def export_config(self):
+        """설정 내보내기"""
+        messagebox.showinfo("알림", "설정 내보내기 기능")
+
+    def import_config(self):
+        """설정 가져오기"""
+        messagebox.showinfo("알림", "설정 가져오기 기능")
+
+    def open_cli(self):
+        """CLI 모드 열기"""
+        cli_path = APP_ROOT / "MacOS" / "FocusTimerCLI"
+        subprocess.Popen([str(PYTHON_PATH), str(cli_path)])
+
+    def open_web(self):
+        """웹 인터페이스 열기"""
+        messagebox.showinfo("알림", "웹 인터페이스가 브라우저에서 열립니다!")
+
+    def view_logs(self):
+        """로그 보기"""
+        log_path = "/var/log/FocusTimer/focus_timer.log"
+        subprocess.run(["open", "-a", "Console", log_path])
+
+    def show_help(self):
+        """도움말 보기"""
+        messagebox.showinfo("도움말", "FocusTimer 사용법을 확인하세요!")
+
+    def show_about(self):
+        """정보 보기"""
+        messagebox.showinfo("정보", f"{PRODUCT_NAME} v{VERSION}\n집중 모드 시스템")
+
+    def quit_app(self):
+        """앱 종료"""
+        if messagebox.askyesno("확인", "앱을 종료하시겠습니까?"):
+            self.cleanup()
+            self.root.quit()
+
+    def cleanup(self):
+        """정리 작업"""
+        try:
+            self.running = False
+
+            # 차단 해제
+            if state.is_blocked:
+                unblock_websites()
+
+            # hosts 파일 잠금 해제
+            self.monitor.system_protection.unlock_hosts_file()
+
+            # 모니터링 중지
+            self.monitor.stop_monitoring()
+
+            # 상태 저장
+            save_state()
+
+            logger.log("INFO", "정리 작업 완료")
+
+        except Exception as e:
+            logger.log("ERROR", f"정리 작업 실패: {e}")
+
+    def run(self):
+        """앱 실행"""
+        # GUI 실행
+        self.root.mainloop()
+
+# ----- 메인 실행 -----
+if __name__ == "__main__":
+    if os.geteuid() != 0:
+        print("⚠️ 관리자 권한으로 실행해야 합니다: sudo python3 FocusTimer")
+        sys.exit(1)
+
+    # 디렉토리 생성
+    os.makedirs(os.path.dirname(STATE_PATH), exist_ok=True)
+    os.makedirs(os.path.dirname(LOG_PATH), exist_ok=True)
+
+    # GUI 애플리케이션 시작
+    app = FocusTimerApp()
+
+    try:
+        app.run()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        app.cleanup()

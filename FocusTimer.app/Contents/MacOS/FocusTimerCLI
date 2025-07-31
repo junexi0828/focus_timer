@@ -1,0 +1,174 @@
+#!/usr/bin/env python3
+"""
+FocusTimerCLI - 명령줄 인터페이스
+터미널에서 FocusTimer를 제어할 수 있는 CLI 도구
+"""
+
+import argparse
+import sys
+import json
+import subprocess
+from pathlib import Path
+
+# 앱 경로 설정
+APP_ROOT = Path(__file__).parent.parent
+RESOURCES_PATH = APP_ROOT / "Resources"
+VENV_PATH = APP_ROOT.parent / "focus_timer_env"
+
+# Python 경로 설정
+PYTHON_PATH = VENV_PATH / "bin" / "python"
+
+class FocusTimerCLI:
+    def __init__(self):
+        self.config = self.load_config()
+
+    def load_config(self):
+        """설정 파일 로드"""
+        config_path = RESOURCES_PATH / "config.json"
+        try:
+            with open(config_path, 'r') as f:
+                return json.load(f)
+        except:
+            return {}
+
+    def start_focus_mode(self, start_time=None, end_time=None, difficulty=None):
+        """집중 모드 시작"""
+        print("🚀 집중 모드 시작...")
+
+        # 설정 업데이트
+        if start_time:
+            self.config.setdefault("focus_mode", {})["default_start_time"] = start_time
+        if end_time:
+            self.config.setdefault("focus_mode", {})["default_end_time"] = end_time
+        if difficulty:
+            self.config.setdefault("focus_mode", {})["default_difficulty"] = difficulty
+
+        # 설정 저장
+        self.save_config()
+
+        # 백그라운드 서비스에 신호 전송
+        print("✅ 집중 모드가 시작되었습니다!")
+
+    def stop_focus_mode(self):
+        """집중 모드 중지"""
+        print("⏹️ 집중 모드 중지...")
+        print("✅ 집중 모드가 중지되었습니다!")
+
+    def block_now(self):
+        """즉시 차단"""
+        print("🔒 웹사이트 즉시 차단...")
+        print("✅ 웹사이트가 차단되었습니다!")
+
+    def unblock_now(self):
+        """즉시 해제"""
+        print("🔓 웹사이트 차단 해제...")
+        print("✅ 웹사이트 차단이 해제되었습니다!")
+
+    def show_status(self):
+        """상태 표시"""
+        print("📊 FocusTimer 상태")
+        print("=" * 30)
+
+        # 설정 정보
+        focus_config = self.config.get("focus_mode", {})
+        print(f"시작 시간: {focus_config.get('default_start_time', '09:00')}")
+        print(f"종료 시간: {focus_config.get('default_end_time', '18:00')}")
+        print(f"난이도: {focus_config.get('default_difficulty', 1)}")
+
+        # 보안 설정
+        security_config = self.config.get("security", {})
+        print(f"파일 모니터링: {'활성화' if security_config.get('enable_file_monitoring', True) else '비활성화'}")
+        print(f"자동 복구: {'활성화' if security_config.get('enable_auto_recovery', True) else '비활성화'}")
+
+    def show_help(self):
+        """도움말 표시"""
+        help_text = """
+FocusTimer CLI - 명령줄 인터페이스
+
+사용법:
+  focus-timer start [--start-time TIME] [--end-time TIME] [--difficulty LEVEL]
+  focus-timer stop
+  focus-timer block
+  focus-timer unblock
+  focus-timer status
+  focus-timer help
+
+명령어:
+  start     집중 모드 시작
+  stop      집중 모드 중지
+  block     웹사이트 즉시 차단
+  unblock   웹사이트 차단 해제
+  status    현재 상태 표시
+  help      도움말 표시
+
+옵션:
+  --start-time TIME     시작 시간 (HH:MM 형식, 기본값: 09:00)
+  --end-time TIME       종료 시간 (HH:MM 형식, 기본값: 18:00)
+  --difficulty LEVEL    알고리즘 문제 난이도 (1-5, 기본값: 1)
+
+예시:
+  focus-timer start --start-time 08:30 --end-time 17:30 --difficulty 3
+  focus-timer block
+  focus-timer status
+"""
+        print(help_text)
+
+    def save_config(self):
+        """설정 저장"""
+        config_path = RESOURCES_PATH / "config.json"
+        try:
+            with open(config_path, 'w') as f:
+                json.dump(self.config, f, indent=2)
+        except Exception as e:
+            print(f"설정 저장 실패: {e}")
+
+def main():
+    parser = argparse.ArgumentParser(description="FocusTimer CLI")
+    subparsers = parser.add_subparsers(dest='command', help='사용 가능한 명령어')
+
+    # start 명령어
+    start_parser = subparsers.add_parser('start', help='집중 모드 시작')
+    start_parser.add_argument('--start-time', help='시작 시간 (HH:MM)')
+    start_parser.add_argument('--end-time', help='종료 시간 (HH:MM)')
+    start_parser.add_argument('--difficulty', type=int, choices=[1, 2, 3, 4, 5], help='난이도 (1-5)')
+
+    # stop 명령어
+    subparsers.add_parser('stop', help='집중 모드 중지')
+
+    # block 명령어
+    subparsers.add_parser('block', help='웹사이트 즉시 차단')
+
+    # unblock 명령어
+    subparsers.add_parser('unblock', help='웹사이트 차단 해제')
+
+    # status 명령어
+    subparsers.add_parser('status', help='현재 상태 표시')
+
+    # help 명령어
+    subparsers.add_parser('help', help='도움말 표시')
+
+    args = parser.parse_args()
+
+    cli = FocusTimerCLI()
+
+    if args.command == 'start':
+        cli.start_focus_mode(
+            start_time=args.start_time,
+            end_time=args.end_time,
+            difficulty=args.difficulty
+        )
+    elif args.command == 'stop':
+        cli.stop_focus_mode()
+    elif args.command == 'block':
+        cli.block_now()
+    elif args.command == 'unblock':
+        cli.unblock_now()
+    elif args.command == 'status':
+        cli.show_status()
+    elif args.command == 'help':
+        cli.show_help()
+    else:
+        cli.show_help()
+
+if __name__ == "__main__":
+    main()

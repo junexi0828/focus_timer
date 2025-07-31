@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleExecutable</key>
+    <string>FocusTimer</string>
+
+    <key>CFBundleIdentifier</key>
+    <string>com.focustimer.app</string>
+
+    <key>CFBundleName</key>
+    <string>FocusTimer</string>
+
+    <key>CFBundleDisplayName</key>
+    <string>FocusTimer</string>
+
+    <key>CFBundleVersion</key>
+    <string>2.0.0</string>
+
+    <key>CFBundleShortVersionString</key>
+    <string>2.0.0</string>
+
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+
+    <key>CFBundleSignature</key>
+    <string>????</string>
+
+    <key>LSMinimumSystemVersion</key>
+    <string>10.15</string>
+
+    <key>NSHighResolutionCapable</key>
+    <true/>
+
+    <key>LSApplicationCategoryType</key>
+    <string>public.app-category.productivity</string>
+
+    <key>CFBundleDocumentTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleTypeName</key>
+            <string>FocusTimer Configuration</string>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+                <string>ftconfig</string>
+            </array>
+            <key>CFBundleTypeRole</key>
+            <string>Viewer</string>
+        </dict>
+    </array>
+
+    <key>NSAppleEventsUsageDescription</key>
+    <string>FocusTimer는 브라우저 제어를 위해 Apple Events에 접근합니다.</string>
+
+    <key>NSSystemAdministrationUsageDescription</key>
+    <string>FocusTimer는 시스템 레벨 보호를 위해 관리자 권한이 필요합니다.</string>
+</dict>
+</plist>
