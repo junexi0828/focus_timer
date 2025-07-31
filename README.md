@@ -9,7 +9,7 @@
 
 **생산성 향상을 위한 강력한 집중 모드 시스템**
 
-[개인용](#personal-edition) • [기업용 CLI](#enterprise-cli-edition) • [기업용 GUI](#enterprise-gui-edition) • [기업용 웹](#enterprise-web-edition)
+[개인용](#personal-edition) • [macOS 앱](#-macos-앱) • [기업용 CLI](#enterprise-cli-edition) • [기업용 GUI](#enterprise-gui-edition) • [기업용 웹](#enterprise-web-edition)
 
 </div>
 
@@ -22,9 +22,10 @@
 | 제품 | 타겟 | 특징 | 가격 |
 |------|------|------|------|
 | **[Personal Edition](#personal-edition)** | 개인 사용자 | 간단한 터미널 기반 | **무료** |
-| **[Enterprise CLI Edition](#enterprise-cli-edition)** | 기업/조직 | 시스템 서비스 + CLI | **$6/월** |
-| **[Enterprise GUI Edition](#enterprise-gui-edition)** | 기업/조직 | GUI + 시스템 서비스 | **$6/월** |
-| **[Enterprise Web Edition](#enterprise-web-edition)** | 기업/조직 | 웹 인터페이스 + 클라우드 | **$9/월** |
+| **[macOS App](#-macos-앱)** | macOS 사용자 | 네이티브 앱 번들 | **$6/월** |
+| **[Enterprise CLI Edition](#enterprise-cli-edition)** | 기업/조직 | 시스템 서비스 + CLI | **$4/월** |
+| **[Enterprise GUI Edition](#enterprise-gui-edition)** | 기업/조직 | GUI + 시스템 서비스 | **$4/월** |
+| **[Enterprise Web Edition](#enterprise-web-edition)** | 기업/조직 | 웹 인터페이스 + 클라우드 | **$7/월** |
 
 </div>
 
@@ -68,6 +69,56 @@ personal/
 ```
 
 **[📖 Personal Edition 상세 문서 →](personal/README.md)**
+
+---
+
+## 🍎 macOS App
+
+<div align="center">
+
+![macOS App](https://img.shields.io/badge/macOS-App%20Bundle-blue?style=for-the-badge&logo=apple)
+
+**macOS 네이티브 앱으로 구현된 통합 집중 모드 시스템**
+
+</div>
+
+### ✨ 주요 기능
+- 🍎 **macOS 네이티브 앱** - 시스템과 완벽 통합
+- 🖥️ **통합 GUI 인터페이스** - 직관적인 사용자 경험
+- 💻 **CLI 명령줄 도구** - 고급 사용자를 위한 터미널 제어
+- 🔄 **백그라운드 서비스** - 지속적인 모니터링 및 보호
+- ⚙️ **중앙화된 설정 관리** - JSON 기반 설정 시스템
+- 🛡️ **시스템 레벨 보호** - hosts 파일 권한 관리
+
+### 🎮 사용 모드
+1. **GUI 모드** - 마우스 클릭으로 모든 제어
+2. **CLI 모드** - 터미널에서 고급 제어
+3. **백그라운드 모드** - 자동 모니터링 및 보호
+
+### 🚀 빠른 시작
+```bash
+# 앱 실행
+open /Applications/FocusTimer.app
+
+# CLI 모드
+/Applications/FocusTimer.app/Contents/MacOS/FocusTimerCLI
+```
+
+### 📁 파일 구조
+```
+FocusTimer.app/
+├── Contents/
+│   ├── Info.plist                    # 앱 번들 정보
+│   ├── MacOS/
+│   │   ├── FocusTimer               # 메인 GUI 애플리케이션
+│   │   ├── FocusTimerCLI            # 명령줄 인터페이스
+│   │   └── FocusTimerHelper         # 백그라운드 서비스
+│   └── Resources/
+│       ├── config.json              # 앱 설정 파일
+│       └── com.focustimer.helper.plist  # LaunchAgent 설정
+```
+
+**[📖 macOS App 상세 문서 →](FocusTimer.app/README.md)**
 
 ---
 
@@ -288,20 +339,21 @@ installers/
 
 <div align="center">
 
-| 기능 | Personal | Enterprise CLI | Enterprise GUI | Enterprise Web |
-|------|----------|----------------|----------------|----------------|
-| **기본 차단** | ✅ | ✅ | ✅ | ✅ |
-| **알고리즘 문제** | ✅ | ✅ | ✅ | ✅ |
-| **시스템 서비스** | ❌ | ✅ | ✅ | ✅ |
-| **GUI 인터페이스** | ❌ | ❌ | ✅ | ❌ |
-| **웹 인터페이스** | ❌ | ❌ | ❌ | ✅ |
-| **설정 관리** | ❌ | ✅ | ✅ | ✅ |
-| **로그 시스템** | ❌ | ✅ | ✅ | ✅ |
-| **다중 차단 레이어** | ❌ | ✅ | ✅ | ✅ |
-| **파일 모니터링** | ❌ | ✅ | ✅ | ✅ |
-| **자동 복구** | ❌ | ✅ | ✅ | ✅ |
-| **원격 관리** | ❌ | ❌ | ❌ | ✅ |
-| **다중 사용자** | ❌ | ❌ | ❌ | ✅ |
+| 기능 | Personal | macOS App | Enterprise CLI | Enterprise GUI | Enterprise Web |
+|------|----------|-----------|----------------|----------------|----------------|
+| **기본 차단** | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **알고리즘 문제** | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **시스템 서비스** | ❌ | ✅ | ✅ | ✅ | ✅ |
+| **GUI 인터페이스** | ❌ | ✅ | ❌ | ✅ | ❌ |
+| **CLI 인터페이스** | ❌ | ✅ | ✅ | ❌ | ❌ |
+| **웹 인터페이스** | ❌ | ❌ | ❌ | ❌ | ✅ |
+| **설정 관리** | ❌ | ✅ | ✅ | ✅ | ✅ |
+| **로그 시스템** | ❌ | ✅ | ✅ | ✅ | ✅ |
+| **다중 차단 레이어** | ❌ | ✅ | ✅ | ✅ | ✅ |
+| **파일 모니터링** | ❌ | ✅ | ✅ | ✅ | ✅ |
+| **자동 복구** | ❌ | ✅ | ✅ | ✅ | ✅ |
+| **원격 관리** | ❌ | ❌ | ❌ | ❌ | ✅ |
+| **다중 사용자** | ❌ | ❌ | ❌ | ❌ | ✅ |
 
 </div>
 
@@ -314,6 +366,12 @@ installers/
 - **사용 목적**: 개인 생산성 향상
 - **주요 기능**: YouTube 차단, 종료 방지
 - **설치 방법**: 단일 파일 실행
+
+### 🍎 macOS 사용자
+- **추천 제품**: macOS App
+- **사용 목적**: macOS 최적화된 집중 모드
+- **주요 기능**: 네이티브 앱, GUI/CLI 통합
+- **설치 방법**: 앱 번들 설치
 
 ### 🏢 소규모 기업
 - **추천 제품**: Enterprise CLI Edition
@@ -350,6 +408,7 @@ installers/
 
 ### 📚 문서
 - **[Personal Edition](personal/README.md)** - 개인용 상세 문서
+- **[macOS App](FocusTimer.app/README.md)** - macOS 앱 상세 문서
 - **[Enterprise CLI Edition](enterprise/README.md)** - 기업용 CLI 상세 문서
 - **[Enterprise GUI Edition](enterprise_gui/README.md)** - 기업용 GUI 상세 문서
 - **[Enterprise Web Edition](enterprise_web/README.md)** - 기업용 웹 상세 문서
