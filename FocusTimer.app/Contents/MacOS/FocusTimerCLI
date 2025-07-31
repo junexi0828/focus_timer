@@ -9,6 +9,7 @@ import sys
 import json
 import subprocess
 from pathlib import Path
+import os
 
 # 앱 경로 설정
 APP_ROOT = Path(__file__).parent.parent
@@ -99,6 +100,11 @@ FocusTimer CLI - 명령줄 인터페이스
   focus-timer block
   focus-timer unblock
   focus-timer status
+  focus-timer logs
+  focus-timer version
+  focus-timer update
+  focus-timer backup
+  focus-timer restore
   focus-timer help
 
 명령어:
@@ -107,6 +113,11 @@ FocusTimer CLI - 명령줄 인터페이스
   block     웹사이트 즉시 차단
   unblock   웹사이트 차단 해제
   status    현재 상태 표시
+  logs      로그 파일 확인
+  version   버전 정보 표시
+  update    업데이트 확인 및 실행
+  backup    설정 백업
+  restore   설정 복구
   help      도움말 표시
 
 옵션:
@@ -114,10 +125,19 @@ FocusTimer CLI - 명령줄 인터페이스
   --end-time TIME       종료 시간 (HH:MM 형식, 기본값: 18:00)
   --difficulty LEVEL    알고리즘 문제 난이도 (1-5, 기본값: 1)
 
+관리 명령어:
+  focus-timer service start|stop|restart|status
+  focus-timer config show|edit|backup|restore
+  focus-timer logs main|helper|error|clear
+  focus-timer system info|check|repair
+
 예시:
   focus-timer start --start-time 08:30 --end-time 17:30 --difficulty 3
   focus-timer block
   focus-timer status
+  focus-timer logs main
+  focus-timer service restart
+  focus-timer update
 """
         print(help_text)
 
@@ -133,6 +153,176 @@ FocusTimer CLI - 명령줄 인터페이스
             print("설정이 저장되었습니다.")
         except Exception as e:
             print(f"설정 저장 실패: {e}")
+
+    def show_logs(self, log_type="main"):
+        """로그 파일 확인"""
+        log_files = {
+            "main": "/var/log/FocusTimer/focus_timer.log",
+            "helper": "/var/log/FocusTimer/helper.log",
+            "error": "/var/log/FocusTimer/helper_error.log"
+        }
+
+        log_file = log_files.get(log_type, log_files["main"])
+
+        if os.path.exists(log_file):
+            print(f"📊 {log_type.upper()} 로그 (최근 20줄):")
+            print("=" * 50)
+            with open(log_file, 'r') as f:
+                lines = f.readlines()
+                for line in lines[-20:]:
+                    print(line.rstrip())
+        else:
+            print(f"❌ 로그 파일을 찾을 수 없습니다: {log_file}")
+
+    def show_version(self):
+        """버전 정보 표시"""
+        try:
+            version = subprocess.check_output([
+                "defaults", "read",
+                "/Applications/FocusTimer.app/Contents/Info.plist",
+                "CFBundleShortVersionString"
+            ], text=True).strip()
+            print(f"📦 FocusTimer 버전: {version}")
+        except:
+            print("❌ 버전 정보를 확인할 수 없습니다.")
+
+    def check_update(self):
+        """업데이트 확인"""
+        print("🔄 업데이트 확인 중...")
+        try:
+            # 원격 버전 확인
+            response = subprocess.check_output([
+                "curl", "-s",
+                "https://api.github.com/repos/your-repo/focus-timer/releases/latest"
+            ], text=True)
+
+            # JSON 파싱 (간단한 방법)
+            if '"tag_name"' in response:
+                remote_version = response.split('"tag_name"')[1].split('"')[1].replace('v', '')
+                print(f"🌐 원격 최신 버전: {remote_version}")
+
+                # 로컬 버전 확인
+                local_version = subprocess.check_output([
+                    "defaults", "read",
+                    "/Applications/FocusTimer.app/Contents/Info.plist",
+                    "CFBundleShortVersionString"
+                ], text=True).strip()
+
+                print(f"💻 로컬 버전: {local_version}")
+
+                if remote_version > local_version:
+                    print("✅ 업데이트가 사용 가능합니다!")
+                    update = input("업데이트를 진행하시겠습니까? (y/n): ")
+                    if update.lower() == 'y':
+                        subprocess.run(["./installers/update_focustimer_app.sh"])
+                else:
+                    print("✅ 이미 최신 버전입니다.")
+            else:
+                print("❌ 원격 버전 정보를 가져올 수 없습니다.")
+        except Exception as e:
+            print(f"❌ 업데이트 확인 실패: {e}")
+
+    def backup_config(self):
+        """설정 백업"""
+        config_file = "/Applications/FocusTimer.app/Contents/Resources/config.json"
+        backup_file = f"{config_file}.backup.$(date +%Y%m%d_%H%M%S)"
+
+        if os.path.exists(config_file):
+            subprocess.run(["sudo", "cp", config_file, backup_file])
+            print(f"💾 설정 백업 완료: {backup_file}")
+        else:
+            print("❌ 설정 파일을 찾을 수 없습니다.")
+
+    def restore_config(self):
+        """설정 복구"""
+        config_file = "/Applications/FocusTimer.app/Contents/Resources/config.json"
+        backup_pattern = f"{config_file}.backup.*"
+
+        # 백업 파일 목록 확인
+        backup_files = subprocess.check_output(["ls", "-t", backup_pattern], text=True).strip().split('\n')
+
+        if backup_files and backup_files[0]:
+            latest_backup = backup_files[0]
+            print(f"📋 최신 백업: {latest_backup}")
+            restore = input("이 백업에서 복구하시겠습니까? (y/n): ")
+            if restore.lower() == 'y':
+                subprocess.run(["sudo", "cp", latest_backup, config_file])
+                print("✅ 설정 복구 완료")
+        else:
+            print("❌ 백업 파일을 찾을 수 없습니다.")
+
+    def service_control(self, action):
+        """서비스 제어"""
+        service_file = "/Library/LaunchAgents/com.focustimer.helper.plist"
+
+        if action == "start":
+            subprocess.run(["sudo", "launchctl", "load", service_file])
+            print("✅ 서비스 시작 완료")
+        elif action == "stop":
+            subprocess.run(["sudo", "launchctl", "unload", service_file])
+            print("⏹️ 서비스 중지 완료")
+        elif action == "restart":
+            subprocess.run(["sudo", "launchctl", "unload", service_file])
+            subprocess.run(["sudo", "launchctl", "load", service_file])
+            print("🔄 서비스 재시작 완료")
+        elif action == "status":
+            result = subprocess.run(["sudo", "launchctl", "list"], capture_output=True, text=True)
+            if "com.focustimer.helper" in result.stdout:
+                print("✅ 서비스가 실행 중입니다")
+            else:
+                print("❌ 서비스가 중지되었습니다")
+
+    def config_control(self, action):
+        """설정 제어"""
+        config_file = "/Applications/FocusTimer.app/Contents/Resources/config.json"
+
+        if action == "show":
+            if os.path.exists(config_file):
+                with open(config_file, 'r') as f:
+                    print(f.read())
+            else:
+                print("❌ 설정 파일을 찾을 수 없습니다.")
+        elif action == "edit":
+            subprocess.run(["sudo", "nano", config_file])
+        elif action == "backup":
+            self.backup_config()
+        elif action == "restore":
+            self.restore_config()
+
+    def system_info(self):
+        """시스템 정보 표시"""
+        print("🖥️ 시스템 정보:")
+        print("=" * 30)
+
+        # macOS 버전
+        macos_version = subprocess.check_output(["sw_vers", "-productVersion"], text=True).strip()
+        print(f"macOS: {macos_version}")
+
+        # Python 버전
+        python_version = subprocess.check_output(["python3", "--version"], text=True).strip()
+        print(f"Python: {python_version}")
+
+        # 앱 버전
+        try:
+            app_version = subprocess.check_output([
+                "defaults", "read",
+                "/Applications/FocusTimer.app/Contents/Info.plist",
+                "CFBundleShortVersionString"
+            ], text=True).strip()
+            print(f"FocusTimer: {app_version}")
+        except:
+            print("FocusTimer: 설치되지 않음")
+
+        # 서비스 상태
+        result = subprocess.run(["sudo", "launchctl", "list"], capture_output=True, text=True)
+        if "com.focustimer.helper" in result.stdout:
+            print("서비스: 실행 중")
+        else:
+            print("서비스: 중지됨")
+
+        # 디스크 공간
+        disk_space = subprocess.check_output(["df", "-h", "/Applications"], text=True).split('\n')[1].split()[4]
+        print(f"디스크 공간: {disk_space} 사용")
 
 def main():
     parser = argparse.ArgumentParser(description="FocusTimer CLI")
@@ -156,6 +346,34 @@ def main():
     # status 명령어
     subparsers.add_parser('status', help='현재 상태 표시')
 
+    # logs 명령어
+    logs_parser = subparsers.add_parser('logs', help='로그 파일 확인')
+    logs_parser.add_argument('type', nargs='?', default='main', choices=['main', 'helper', 'error'], help='로그 타입')
+
+    # version 명령어
+    subparsers.add_parser('version', help='버전 정보 표시')
+
+    # update 명령어
+    subparsers.add_parser('update', help='업데이트 확인 및 실행')
+
+    # backup 명령어
+    subparsers.add_parser('backup', help='설정 백업')
+
+    # restore 명령어
+    subparsers.add_parser('restore', help='설정 복구')
+
+    # service 명령어
+    service_parser = subparsers.add_parser('service', help='서비스 제어')
+    service_parser.add_argument('action', choices=['start', 'stop', 'restart', 'status'], help='서비스 액션')
+
+    # config 명령어
+    config_parser = subparsers.add_parser('config', help='설정 제어')
+    config_parser.add_argument('action', choices=['show', 'edit', 'backup', 'restore'], help='설정 액션')
+
+    # system 명령어
+    system_parser = subparsers.add_parser('system', help='시스템 정보')
+    system_parser.add_argument('action', choices=['info', 'check', 'repair'], help='시스템 액션')
+
     # help 명령어
     subparsers.add_parser('help', help='도움말 표시')
 
@@ -177,6 +395,25 @@ def main():
         cli.unblock_now()
     elif args.command == 'status':
         cli.show_status()
+    elif args.command == 'logs':
+        cli.show_logs(args.type)
+    elif args.command == 'version':
+        cli.show_version()
+    elif args.command == 'update':
+        cli.check_update()
+    elif args.command == 'backup':
+        cli.backup_config()
+    elif args.command == 'restore':
+        cli.restore_config()
+    elif args.command == 'service':
+        cli.service_control(args.action)
+    elif args.command == 'config':
+        cli.config_control(args.action)
+    elif args.command == 'system':
+        if args.action == 'info':
+            cli.system_info()
+        else:
+            print(f"시스템 {args.action} 기능은 아직 구현되지 않았습니다.")
     elif args.command == 'help':
         cli.show_help()
     else:
