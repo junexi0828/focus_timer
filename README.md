@@ -22,9 +22,9 @@
 | 제품 | 타겟 | 특징 | 가격 |
 |------|------|------|------|
 | **[Personal Edition](#personal-edition)** | 개인 사용자 | 간단한 터미널 기반 | **무료** |
-| **[Enterprise CLI Edition](#enterprise-cli-edition)** | 기업/조직 | 시스템 서비스 + CLI | **$99/월** |
-| **[Enterprise GUI Edition](#enterprise-gui-edition)** | 기업/조직 | GUI + 시스템 서비스 | **$99/월** |
-| **[Enterprise Web Edition](#enterprise-web-edition)** | 기업/조직 | 웹 인터페이스 + 클라우드 | **$199/월** |
+| **[Enterprise CLI Edition](#enterprise-cli-edition)** | 기업/조직 | 시스템 서비스 + CLI | **$6/월** |
+| **[Enterprise GUI Edition](#enterprise-gui-edition)** | 기업/조직 | GUI + 시스템 서비스 | **$6/월** |
+| **[Enterprise Web Edition](#enterprise-web-edition)** | 기업/조직 | 웹 인터페이스 + 클라우드 | **$9/월** |
 
 </div>
 

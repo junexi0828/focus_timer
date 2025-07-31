@@ -19,8 +19,11 @@ APP_ROOT = Path(__file__).parent.parent
 RESOURCES_PATH = APP_ROOT / "Resources"
 VENV_PATH = APP_ROOT.parent / "focus_timer_env"
 
-# Python 경로 설정
-PYTHON_PATH = VENV_PATH / "bin" / "python"
+# Python 경로 설정 (가상환경이 없으면 시스템 Python 사용)
+if (VENV_PATH / "bin" / "python").exists():
+    PYTHON_PATH = VENV_PATH / "bin" / "python"
+else:
+    PYTHON_PATH = Path("/usr/bin/python3")
 
 class FocusTimerHelper:
     def __init__(self):
@@ -33,20 +36,29 @@ class FocusTimerHelper:
         """설정 파일 로드"""
         config_path = RESOURCES_PATH / "config.json"
         try:
-            with open(config_path, 'r') as f:
-                return json.load(f)
-        except:
-            return {
-                "focus_mode": {
-                    "default_start_time": "09:00",
-                    "default_end_time": "18:00",
-                    "default_difficulty": 1
-                },
-                "security": {
-                    "enable_file_monitoring": True,
-                    "enable_auto_recovery": True
-                }
+            if config_path.exists():
+                with open(config_path, 'r') as f:
+                    return json.load(f)
+            else:
+                print(f"[{datetime.datetime.now()}] 설정 파일을 찾을 수 없습니다: {config_path}")
+                return self.get_default_config()
+        except Exception as e:
+            print(f"[{datetime.datetime.now()}] 설정 파일 로드 실패: {e}")
+            return self.get_default_config()
+
+    def get_default_config(self):
+        """기본 설정 반환"""
+        return {
+            "focus_mode": {
+                "default_start_time": "09:00",
+                "default_end_time": "18:00",
+                "default_difficulty": 1
+            },
+            "security": {
+                "enable_file_monitoring": True,
+                "enable_auto_recovery": True
             }
+        }
 
     def setup_signal_handlers(self):
         """시그널 핸들러 설정"""
@@ -62,9 +74,13 @@ class FocusTimerHelper:
         """집중 모드 시작"""
         try:
             # 기존 Enterprise 로직 실행
-            enterprise_path = Path(__Users/juns/focus_timer/enterprise/focus_timer_enterprise.py
-            subprocess.run([str(PYTHON_PATH), str(enterprise_path)],
-                         capture_output=True, timeout=5)
+            enterprise_path = APP_ROOT.parent / "enterprise" / "focus_timer_enterprise.py"
+            if enterprise_path.exists():
+                subprocess.run([str(PYTHON_PATH), str(enterprise_path)],
+                             capture_output=True, timeout=5)
+            else:
+                print(f"[{datetime.datetime.now()}] Enterprise 파일을 찾을 수 없습니다: {enterprise_path}")
+
             self.focus_mode_active = True
             print(f"[{datetime.datetime.now()}] 집중 모드 시작됨")
         except Exception as e:

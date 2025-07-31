@@ -30,13 +30,26 @@ import psutil
 APP_ROOT = Path(__file__).parent.parent
 RESOURCES_PATH = APP_ROOT / "Resources"
 VENV_PATH = APP_ROOT.parent / "focus_timer_env"
-PYTHON_PATH = VENV_PATH / "bin" / "python"
+
+# Python 경로 설정 (가상환경이 없으면 시스템 Python 사용)
+if (VENV_PATH / "bin" / "python").exists():
+    PYTHON_PATH = VENV_PATH / "bin" / "python"
+else:
+    PYTHON_PATH = Path("/usr/bin/python3")
+
+# ----- 앱 정보 상수 -----
+PRODUCT_NAME = "FocusTimer"
+VERSION = "2.0.0"
+
+# ----- 시스템 경로 상수 -----
+STATE_PATH = "/Library/Application Support/FocusTimer/state.json"
+LOG_PATH = "/var/log/FocusTimer/focus_timer.log"
 
 # ----- 설정 관리 클래스 -----
 class ConfigManager:
     def __init__(self):
         self.config_path = RESOURCES_PATH / "config.json"
-        self.state_path = "/Library/Application Support/FocusTimer/state.json"
+        self.state_path = STATE_PATH
         self.config = self.load_config()
         self.ensure_directories()
 
@@ -70,7 +83,7 @@ class ConfigManager:
                 "redirect_ip": "127.0.0.1",
                 "backup_path": "/Library/Application Support/FocusTimer/hosts_backup",
                 "lock_file": "/Library/Application Support/FocusTimer/focus_timer.lock",
-                "log_path": "/var/log/FocusTimer/focus_timer.log",
+                "log_path": LOG_PATH,
                 "pid_file": "/var/run/focus_timer.pid"
             },
             "blocked_websites": {
@@ -1032,7 +1045,13 @@ class FocusTimerApp:
     def open_cli(self):
         """CLI 모드 열기"""
         cli_path = APP_ROOT / "MacOS" / "FocusTimerCLI"
-        subprocess.Popen([str(PYTHON_PATH), str(cli_path)])
+        if cli_path.exists():
+            try:
+                subprocess.Popen([str(PYTHON_PATH), str(cli_path)])
+            except Exception as e:
+                messagebox.showerror("오류", f"CLI 모드 실행 실패: {e}")
+        else:
+            messagebox.showerror("오류", f"CLI 파일을 찾을 수 없습니다: {cli_path}")
 
     def open_web(self):
         """웹 인터페이스 열기"""
@@ -1040,8 +1059,14 @@ class FocusTimerApp:
 
     def view_logs(self):
         """로그 보기"""
-        log_path = "/var/log/FocusTimer/focus_timer.log"
-        subprocess.run(["open", "-a", "Console", log_path])
+        log_path = LOG_PATH
+        if os.path.exists(log_path):
+            try:
+                subprocess.run(["open", "-a", "Console", log_path])
+            except Exception as e:
+                messagebox.showerror("오류", f"로그 파일 열기 실패: {e}")
+        else:
+            messagebox.showinfo("알림", "로그 파일이 아직 생성되지 않았습니다.")
 
     def show_help(self):
         """도움말 보기"""

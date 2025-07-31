@@ -7,8 +7,9 @@
 
     <key>ProgramArguments</key>
     <array>
-        <string>/Users/juns/focus_timer/focus_timer_env/bin/python</string>
-        <string>/Users/juns/focus_timer/FocusTimer.app/Contents/MacOS/FocusTimerHelper</string>
+        <string>/usr/bin/env</string>
+        <string>python3</string>
+        <string>/Applications/FocusTimer.app/Contents/MacOS/FocusTimerHelper</string>
     </array>
 
     <key>RunAtLoad</key>
@@ -24,7 +25,7 @@
     <string>/var/log/FocusTimer/helper_error.log</string>
 
     <key>WorkingDirectory</key>
-    <string>/Users/juns/focus_timer</string>
+    <string>/Applications/FocusTimer.app/Contents/MacOS</string>
 
     <key>EnvironmentVariables</key>
     <dict>

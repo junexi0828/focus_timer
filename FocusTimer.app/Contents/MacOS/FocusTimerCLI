@@ -15,8 +15,11 @@ APP_ROOT = Path(__file__).parent.parent
 RESOURCES_PATH = APP_ROOT / "Resources"
 VENV_PATH = APP_ROOT.parent / "focus_timer_env"
 
-# Python 경로 설정
-PYTHON_PATH = VENV_PATH / "bin" / "python"
+# Python 경로 설정 (가상환경이 없으면 시스템 Python 사용)
+if (VENV_PATH / "bin" / "python").exists():
+    PYTHON_PATH = VENV_PATH / "bin" / "python"
+else:
+    PYTHON_PATH = Path("/usr/bin/python3")
 
 class FocusTimerCLI:
     def __init__(self):
@@ -26,9 +29,14 @@ class FocusTimerCLI:
         """설정 파일 로드"""
         config_path = RESOURCES_PATH / "config.json"
         try:
-            with open(config_path, 'r') as f:
-                return json.load(f)
-        except:
+            if config_path.exists():
+                with open(config_path, 'r') as f:
+                    return json.load(f)
+            else:
+                print(f"설정 파일을 찾을 수 없습니다: {config_path}")
+                return {}
+        except Exception as e:
+            print(f"설정 파일 로드 실패: {e}")
             return {}
 
     def start_focus_mode(self, start_time=None, end_time=None, difficulty=None):
@@ -117,8 +125,12 @@ FocusTimer CLI - 명령줄 인터페이스
         """설정 저장"""
         config_path = RESOURCES_PATH / "config.json"
         try:
+            # 디렉토리가 없으면 생성
+            config_path.parent.mkdir(parents=True, exist_ok=True)
+
             with open(config_path, 'w') as f:
                 json.dump(self.config, f, indent=2)
+            print("설정이 저장되었습니다.")
         except Exception as e:
             print(f"설정 저장 실패: {e}")
 
