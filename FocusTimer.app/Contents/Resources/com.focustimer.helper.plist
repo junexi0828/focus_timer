@@ -7,8 +7,7 @@
 
     <key>ProgramArguments</key>
     <array>
-        <string>/usr/bin/env</string>
-        <string>python3</string>
+        <string>/Applications/FocusTimer.app/../focus_timer_env/bin/python</string>
         <string>/Applications/FocusTimer.app/Contents/MacOS/FocusTimerHelper</string>
     </array>
 
