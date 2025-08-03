@@ -34,6 +34,12 @@ CURRENT_VERSION="2.0.0"
 PRODUCT_NAME="FocusTimer.app"
 
 echo -e "${BLUE}🗑️ $PRODUCT_NAME v$CURRENT_VERSION 완전 제거를 시작합니다...${NC}"
+echo
+echo -e "${GREEN}🛡️ 개발 코드 보호:${NC}"
+echo "  • 소스 코드 폴더는 절대 삭제되지 않습니다"
+echo "  • 설치된 앱만 제거됩니다 (/Applications/FocusTimer.app)"
+echo "  • 개발 중인 코드는 안전하게 보호됩니다"
+echo
 
 # 관리자 권한 확인
 if [[ $EUID -ne 0 ]]; then
@@ -96,16 +102,24 @@ for file in "${LAUNCH_FILES[@]}"; do
     fi
 done
 
-# 애플리케이션 제거
-log_step "애플리케이션 제거 중..."
+# 설치된 애플리케이션 제거 (개발 코드는 보호됨)
+log_step "설치된 애플리케이션 제거 중..."
 
 APP_PATH="/Applications/FocusTimer.app"
 if [[ -d "$APP_PATH" ]]; then
-    log_info "FocusTimer.app 제거 중..."
+    log_info "설치된 FocusTimer.app 제거 중..."
+    log_info "  📍 제거 대상: $APP_PATH"
+    log_info "  🛡️ 개발 코드는 보호됨: /Users/juns/focus_timer/"
     rm -rf "$APP_PATH"
-    log_info "FocusTimer.app 제거 완료"
+    log_info "설치된 FocusTimer.app 제거 완료"
 else
-    log_info "FocusTimer.app이 설치되어 있지 않습니다"
+    log_info "설치된 FocusTimer.app이 없습니다"
+fi
+
+# 개발 코드 폴더 확인 (보호됨)
+DEV_APP_PATH="/Users/juns/focus_timer/FocusTimer.app"
+if [[ -d "$DEV_APP_PATH" ]]; then
+    log_info "개발 코드 폴더 확인: $DEV_APP_PATH (보호됨)"
 fi
 
 # CLI 도구 제거
@@ -195,6 +209,29 @@ if [[ $found_user_files == true ]]; then
 else
     log_info "사용자 설정 파일이 없습니다"
 fi
+
+# 개발 코드 폴더 보호 확인
+log_step "개발 코드 폴더 보호 확인 중..."
+
+DEVELOPMENT_PATHS=(
+    "/Users/juns/focus_timer"
+    "/Users/juns/focus_timer/FocusTimer.app"
+    "/Users/juns/focus_timer/algorithm_system"
+    "/Users/juns/focus_timer/config"
+    "/Users/juns/focus_timer/enterprise"
+    "/Users/juns/focus_timer/enterprise_gui"
+    "/Users/juns/focus_timer/enterprise_web"
+    "/Users/juns/focus_timer/personal"
+    "/Users/juns/focus_timer/docs"
+    "/Users/juns/focus_timer/installers"
+)
+
+log_info "개발 코드 폴더는 보호됩니다:"
+for path in "${DEVELOPMENT_PATHS[@]}"; do
+    if [[ -e "$path" ]]; then
+        log_info "  ✅ 보호됨: $path"
+    fi
+done
 
 # hosts 파일 복구
 log_step "hosts 파일 복구 중..."
@@ -302,12 +339,21 @@ echo -e "${GREEN}🎉 $PRODUCT_NAME v$CURRENT_VERSION 완전 제거가 완료되
 echo
 echo -e "${BLUE}📋 제거된 구성 요소:${NC}"
 echo "  ✅ 시스템 서비스 (LaunchAgent)"
-echo "  ✅ 애플리케이션 파일 (FocusTimer.app)"
+echo "  ✅ 애플리케이션 파일 (/Applications/FocusTimer.app)"
 echo "  ✅ CLI 도구 (focus-timer)"
 echo "  ✅ hosts 파일 복구"
 echo "  ✅ DNS 캐시 초기화"
 echo "  ✅ 브라우저 캐시 초기화 (선택적)"
 echo "  ✅ 백업 파일 정리"
+echo
+echo -e "${GREEN}🛡️ 보호된 개발 코드:${NC}"
+echo "  ✅ 소스 코드 폴더 (/Users/juns/focus_timer)"
+echo "  ✅ 알고리즘 시스템 (/Users/juns/focus_timer/algorithm_system)"
+echo "  ✅ 설정 파일 (/Users/juns/focus_timer/config)"
+echo "  ✅ 엔터프라이즈 버전 (/Users/juns/focus_timer/enterprise*)"
+echo "  ✅ 개인용 버전 (/Users/juns/focus_timer/personal)"
+echo "  ✅ 문서 (/Users/juns/focus_timer/docs)"
+echo "  ✅ 설치 스크립트 (/Users/juns/focus_timer/installers)"
 echo
 echo -e "${YELLOW}⚠️ 수동 확인 필요:${NC}"
 echo "  🌐 브라우저 확장 프로그램 (Chrome 확장 프로그램 관리에서 제거)"

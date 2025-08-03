@@ -1420,22 +1420,40 @@ def block_websites():
         logger.log("ERROR", f"차단 적용 실패: {e}")
 
 def unblock_websites():
-    """다중 레이어 차단 해제 (강화된 집중모드 제한)"""
+    """다중 레이어 차단 해제 (시간 검증 포함)"""
     try:
-        # 강화된 집중모드 제한 체크
+        # 집중모드 시간대인지 정확히 체크
         if hasattr(state, 'is_focus_mode') and state.is_focus_mode:
-            # 집중모드가 활성화되어 있으면 무조건 차단해제 금지
-            logger.log("WARNING", "집중모드 활성화 상태에서 차단해제 시도 차단")
+            # 집중모드 시간대인지 확인
+            if hasattr(state, 'focus_start_time') and hasattr(state, 'focus_end_time'):
+                if state.focus_start_time and state.focus_end_time:
+                    now = datetime.datetime.now()
+                    current_time = now.time()
+                    start_time = state.focus_start_time.time()
+                    end_time = state.focus_end_time.time()
 
-            # 사운드 재생 (가능한 경우)
-            try:
-                import os
-                os.system("afplay /System/Library/Sounds/Basso.aiff")
-                os.system("afplay /System/Library/Sounds/Sosumi.aiff")
-            except:
-                pass
+                    # 집중모드 시간대인지 확인
+                    if start_time <= end_time:
+                        is_focus_time = start_time <= current_time <= end_time
+                    else:
+                        is_focus_time = current_time >= start_time or current_time <= end_time
 
-            return False
+                    if is_focus_time and state.is_blocked:
+                        # 집중모드 시간대에는 차단해제 금지
+                        logger.log("WARNING", "집중모드 시간대에서 차단해제 시도 차단")
+
+                        # 사운드 재생 (가능한 경우)
+                        try:
+                            import os
+                            os.system("afplay /System/Library/Sounds/Basso.aiff")
+                            os.system("afplay /System/Library/Sounds/Sosumi.aiff")
+                        except:
+                            pass
+
+                        return False
+                    else:
+                        # 집중모드 시간대가 아니면 허용
+                        logger.log("INFO", "집중모드 활성화되었지만 시간대가 아님 - 차단해제 허용")
 
         # 1. hosts 파일 복구
         restore_hosts_file()
@@ -1787,14 +1805,55 @@ class FocusTimerApp:
                 logger.log("ERROR", f"집중 모드 브라우저 제어 실패: {e}")
 
         def release_focus_mode_browser(self):
-            """집중 모드 브라우저 해제 (BrowserManager 연결)"""
+            """집중 모드 브라우저 해제 (강화된 시간 검증 포함)"""
             try:
+                # 중복 호출 방지
+                if hasattr(self, '_release_focus_mode_browser_called') and self._release_focus_mode_browser_called:
+                    logger.log("WARNING", "집중 모드 브라우저 해제 중복 호출 방지")
+                    return
+
+                self._release_focus_mode_browser_called = True
+
+                # 집중모드 시간대인지 체크 (더 엄격한 검증)
+                if state.is_focus_mode and self.is_focus_time() and state.is_blocked:
+                    # 경고 사운드 재생
+                    self.play_warning_sound()
+
+                    # 강력한 경고 메시지 (더 명확한 안내)
+                    current_time = datetime.datetime.now().strftime("%H:%M")
+                    if state.focus_end_time:
+                        end_time = state.focus_end_time.strftime("%H:%M")
+                        message = f"🚫 집중모드 시간 제한!\n\n현재 시간: {current_time}\n집중모드 종료 시간: {end_time}\n\n브라우저 제어 해제는 집중모드 시간대에 허용되지 않습니다.\n\n집중모드 시간이 끝날 때까지 기다려주세요."
+                    else:
+                        message = f"🚫 집중모드 시간 제한!\n\n현재 시간: {current_time}\n\n브라우저 제어 해제는 집중모드 시간대에 허용되지 않습니다.\n\n집중모드 시간이 끝날 때까지 기다려주세요."
+
+                    messagebox.showwarning("집중모드 시간 제한", message)
+
+                    # 차단 사운드 재생
+                    self.play_block_sound()
+
+                    logger.log("WARNING", f"집중모드 시간대에서 브라우저 해제 시도 차단 (현재시간: {current_time})")
+                    self._release_focus_mode_browser_called = False
+                    return
+                elif state.is_focus_mode and not self.is_focus_time():
+                    # 집중모드가 활성화되어 있지만 시간대가 아니면 허용
+                    logger.log("INFO", "집중모드 활성화되었지만 시간대가 아님 - 브라우저 해제 허용")
+
+                # 브라우저 제어 해제 실행
                 if hasattr(self, 'browser_manager') and self.browser_manager:
                     self.browser_manager.focus_mode_browser_control(enable_focus=False)
+                    logger.log("INFO", "집중 모드 브라우저 제어 해제 완료")
                 else:
                     logger.log("ERROR", "브라우저 관리자가 초기화되지 않았습니다.")
+
+                # 중복 호출 방지 플래그 해제
+                self._release_focus_mode_browser_called = False
+
             except Exception as e:
                 logger.log("ERROR", f"집중 모드 브라우저 해제 실패: {e}")
+                # 예외 발생 시에도 플래그 해제
+                if hasattr(self, '_release_focus_mode_browser_called'):
+                    self._release_focus_mode_browser_called = False
 
         def enhanced_browser_blocking(self):
             """강화된 브라우저 차단 (BrowserManager 연결)"""
@@ -2966,23 +3025,47 @@ class FocusTimerApp:
             messagebox.showerror("오류", f"집중 모드 시작 실패: {e}")
 
     def stop_focus_mode(self):
-        """집중 모드 중지 (강화된 제한)"""
+        """집중 모드 중지 (강화된 시간 검증 포함)"""
         try:
-            # 강화된 집중모드 제한 체크
-            if state.is_focus_mode:
+            # 중복 호출 방지
+            if hasattr(self, '_stop_focus_mode_called') and self._stop_focus_mode_called:
+                logger.log("WARNING", "집중모드 중지 중복 호출 방지")
+                return
+
+            self._stop_focus_mode_called = True
+
+            # 집중모드가 활성화되어 있는지 먼저 확인
+            if not state.is_focus_mode:
+                logger.log("INFO", "집중모드가 이미 비활성화 상태")
+                self._stop_focus_mode_called = False
+                return
+
+            # 집중모드 시간대인지 체크 (더 엄격한 검증)
+            if self.is_focus_time() and state.is_blocked:
                 # 경고 사운드 재생
                 self.play_warning_sound()
 
-                # 강력한 경고 메시지
-                message = f"🚫 집중모드 제한!\n\n집중 모드 중지는 집중모드가 활성화된 상태에서 절대 허용되지 않습니다.\n\n집중모드를 완전히 종료하려면 집중모드 설정에서 비활성화하거나\n집중모드 시간이 끝날 때까지 기다려주세요."
-                messagebox.showwarning("집중모드 제한", message)
+                # 강력한 경고 메시지 (더 명확한 안내)
+                current_time = datetime.datetime.now().strftime("%H:%M")
+                if state.focus_end_time:
+                    end_time = state.focus_end_time.strftime("%H:%M")
+                    message = f"🚫 집중모드 시간 제한!\n\n현재 시간: {current_time}\n집중모드 종료 시간: {end_time}\n\n집중 모드 중지는 집중모드 시간대에 허용되지 않습니다.\n\n집중모드 시간이 끝날 때까지 기다려주세요."
+                else:
+                    message = f"🚫 집중모드 시간 제한!\n\n현재 시간: {current_time}\n\n집중 모드 중지는 집중모드 시간대에 허용되지 않습니다.\n\n집중모드 시간이 끝날 때까지 기다려주세요."
+
+                messagebox.showwarning("집중모드 시간 제한", message)
 
                 # 차단 사운드 재생
                 self.play_block_sound()
 
-                logger.log("WARNING", "집중모드 활성화 상태에서 중지 시도 차단")
+                logger.log("WARNING", f"집중모드 시간대에서 중지 시도 차단 (현재시간: {current_time})")
+                self._stop_focus_mode_called = False
                 return
+            elif state.is_focus_mode and not self.is_focus_time():
+                # 집중모드가 활성화되어 있지만 시간대가 아니면 허용
+                logger.log("INFO", "집중모드 활성화되었지만 시간대가 아님 - 중지 허용")
 
+            # 집중모드 중지 실행
             state.is_focus_mode = False
             state.is_blocked = False
 
@@ -3000,8 +3083,15 @@ class FocusTimerApp:
             self.status_var.set("집중 모드 중지됨 - 브라우저 제어 해제")
             messagebox.showinfo("성공", "집중 모드가 중지되었습니다!\n브라우저 제어가 해제되었습니다.")
 
+            # 중복 호출 방지 플래그 해제
+            self._stop_focus_mode_called = False
+
         except Exception as e:
+            logger.log("ERROR", f"집중 모드 중지 실패: {e}")
             messagebox.showerror("오류", f"집중 모드 중지 실패: {e}")
+            # 예외 발생 시에도 플래그 해제
+            if hasattr(self, '_stop_focus_mode_called'):
+                self._stop_focus_mode_called = False
 
     def block_now(self):
         """즉시 차단"""
@@ -3012,27 +3102,52 @@ class FocusTimerApp:
             messagebox.showerror("오류", f"즉시 차단 실패: {e}")
 
     def unblock_now(self):
-        """즉시 해제 (강화된 제한)"""
+        """즉시 해제 (강화된 시간 검증 포함)"""
         try:
-            # 강화된 집중모드 제한 체크
-            if state.is_focus_mode:
+            # 중복 호출 방지
+            if hasattr(self, '_unblock_now_called') and self._unblock_now_called:
+                logger.log("WARNING", "즉시 해제 중복 호출 방지")
+                return
+
+            self._unblock_now_called = True
+
+            # 집중모드 시간대인지 체크 (더 엄격한 검증)
+            if state.is_focus_mode and self.is_focus_time() and state.is_blocked:
                 # 경고 사운드 재생
                 self.play_warning_sound()
 
-                # 강력한 경고 메시지
-                message = f"🚫 집중모드 제한!\n\n즉시 해제는 집중모드가 활성화된 상태에서 절대 허용되지 않습니다.\n\n집중모드가 완전히 종료될 때까지 기다려주세요."
-                messagebox.showwarning("집중모드 제한", message)
+                # 강력한 경고 메시지 (더 명확한 안내)
+                current_time = datetime.datetime.now().strftime("%H:%M")
+                if state.focus_end_time:
+                    end_time = state.focus_end_time.strftime("%H:%M")
+                    message = f"🚫 집중모드 시간 제한!\n\n현재 시간: {current_time}\n집중모드 종료 시간: {end_time}\n\n즉시 해제는 집중모드 시간대에 허용되지 않습니다.\n\n집중모드 시간이 끝날 때까지 기다려주세요."
+                else:
+                    message = f"🚫 집중모드 시간 제한!\n\n현재 시간: {current_time}\n\n즉시 해제는 집중모드 시간대에 허용되지 않습니다.\n\n집중모드 시간이 끝날 때까지 기다려주세요."
+
+                messagebox.showwarning("집중모드 시간 제한", message)
 
                 # 차단 사운드 재생
                 self.play_block_sound()
 
-                logger.log("WARNING", "집중모드 활성화 상태에서 즉시 해제 시도 차단")
+                logger.log("WARNING", f"집중모드 시간대에서 즉시 해제 시도 차단 (현재시간: {current_time})")
+                self._unblock_now_called = False
                 return
+            elif state.is_focus_mode and not self.is_focus_time():
+                # 집중모드가 활성화되어 있지만 시간대가 아니면 허용
+                logger.log("INFO", "집중모드 활성화되었지만 시간대가 아님 - 즉시 해제 허용")
 
             unblock_websites()
             messagebox.showinfo("알림", "웹사이트 차단이 해제되었습니다!")
+
+            # 중복 호출 방지 플래그 해제
+            self._unblock_now_called = False
+
         except Exception as e:
+            logger.log("ERROR", f"즉시 해제 실패: {e}")
             messagebox.showerror("오류", f"즉시 해제 실패: {e}")
+            # 예외 발생 시에도 플래그 해제
+            if hasattr(self, '_unblock_now_called'):
+                self._unblock_now_called = False
 
     def start_monitoring(self):
         """모니터링 시작"""
@@ -3627,12 +3742,12 @@ class FocusTimerApp:
         except Exception as e:
             logger.log("ERROR", f"차단 사운드 재생 실패: {e}")
 
-        def check_focus_mode_restriction(self, action_name="이 작업"):
+    def check_focus_mode_restriction(self, action_name="이 작업"):
         """집중모드 시간 차단해제 방지 체크 (시간 검증 포함)"""
         try:
             # 집중모드 시간대인지 정확히 체크
             is_restricted = False
-            
+
             # 1. 집중모드가 활성화되어 있고
             if state.is_focus_mode:
                 # 2. 집중모드 시간대이고
@@ -3645,18 +3760,18 @@ class FocusTimerApp:
                     # 집중모드 시간대가 아니면 차단하지 않음
                     logger.log("INFO", f"집중모드 활성화되었지만 시간대가 아님 - {action_name} 허용")
                     return True
-            
+
             if is_restricted:
                 # 경고 사운드 재생
                 self.play_warning_sound()
-                
+
                 # 경고 메시지 표시
                 message = f"⚠️ 집중모드 시간 제한!\n\n{action_name}은 집중모드 시간대에 허용되지 않습니다.\n\n집중모드 시간이 끝날 때까지 기다려주세요."
                 messagebox.showwarning("집중모드 시간 제한", message)
-                
+
                 # 차단 사운드 재생
                 self.play_block_sound()
-                
+
                 logger.log("WARNING", f"집중모드 시간대 차단해제 시도 차단: {action_name}")
                 return False
             return True
@@ -3669,9 +3784,15 @@ class FocusTimerApp:
         self.quit_app()
 
     def is_focus_time(self):
-        """현재가 집중 모드 시간대인지 확인"""
+        """현재가 집중 모드 시간대인지 확인 (강화된 검증)"""
         try:
-            if not state.is_focus_mode or not state.focus_start_time or not state.focus_end_time:
+            # 기본 조건 검증
+            if not state.is_focus_mode:
+                logger.log("DEBUG", "집중모드가 비활성화 상태")
+                return False
+
+            if not state.focus_start_time or not state.focus_end_time:
+                logger.log("DEBUG", "집중모드 시간이 설정되지 않음")
                 return False
 
             now = datetime.datetime.now()
@@ -3679,11 +3800,25 @@ class FocusTimerApp:
             start_time = state.focus_start_time.time()
             end_time = state.focus_end_time.time()
 
-            # 시간대 비교
+            # 시간대 비교 (더 정확한 로직)
             if start_time <= end_time:
-                return start_time <= current_time <= end_time
+                # 같은 날 내의 시간대 (예: 09:00 ~ 18:00)
+                is_within_time = start_time <= current_time <= end_time
             else:
-                return current_time >= start_time or current_time <= end_time
+                # 자정을 넘는 시간대 (예: 22:00 ~ 06:00)
+                is_within_time = current_time >= start_time or current_time <= end_time
+
+            # 디버그 로그 추가
+            current_str = current_time.strftime("%H:%M")
+            start_str = start_time.strftime("%H:%M")
+            end_str = end_time.strftime("%H:%M")
+
+            if is_within_time:
+                logger.log("DEBUG", f"집중모드 시간대 확인: 현재({current_str}) - 시작({start_str}) ~ 종료({end_str}) = 집중시간")
+            else:
+                logger.log("DEBUG", f"집중모드 시간대 확인: 현재({current_str}) - 시작({start_str}) ~ 종료({end_str}) = 자유시간")
+
+            return is_within_time
 
         except Exception as e:
             logger.log("ERROR", f"집중 모드 시간 확인 실패: {e}")

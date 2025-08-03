@@ -341,6 +341,85 @@ install_resources() {
         create_default_launch_agent
     fi
 
+    # 알고리즘 시스템 파일들 복사
+    log_info "알고리즘 시스템 파일들 설치 중..."
+
+    # Python 모듈 파일들
+    algorithm_files=(
+        "algorithm_tab.py"
+        "gui_algorithm_manager.py"
+        "advanced_challenge_system.py"
+        "user_progress_tracker.py"
+        "problem_data_structures.py"
+        "remote_problem_provider.py"
+        "example_problems.py"
+        "advanced_challenge_example.py"
+        "remote_provider_example.py"
+        "import_utils.py"
+        "integrated_focus_timer.py"
+        "setup.py"
+        "__init__.py"
+        "test_import.py"
+    )
+
+    for file in "${algorithm_files[@]}"; do
+        if [[ -f "FocusTimer.app/Contents/Resources/$file" ]]; then
+            cp "FocusTimer.app/Contents/Resources/$file" "/Applications/FocusTimer.app/Contents/Resources/"
+            log_info "알고리즘 파일 설치 완료: $file"
+        else
+            log_warn "알고리즘 파일을 찾을 수 없습니다: $file"
+        fi
+    done
+
+    # 문서 파일들
+    doc_files=(
+        "README.md"
+        "AUTO_SETUP.md"
+    )
+
+    for file in "${doc_files[@]}"; do
+        if [[ -f "FocusTimer.app/Contents/Resources/$file" ]]; then
+            cp "FocusTimer.app/Contents/Resources/$file" "/Applications/FocusTimer.app/Contents/Resources/"
+            log_info "문서 파일 설치 완료: $file"
+        fi
+    done
+
+    # 아이콘 파일 복사
+    log_info "아이콘 파일 설치 중..."
+
+    # .icns 파일 복사 (메인 아이콘)
+    if [[ -f "FocusTimer.icns" ]]; then
+        cp "FocusTimer.icns" "/Applications/FocusTimer.app/Contents/Resources/"
+        log_info "메인 아이콘 파일 설치: FocusTimer.icns"
+    else
+        log_warn "메인 아이콘 파일을 찾을 수 없습니다: FocusTimer.icns"
+    fi
+
+    # iconset 디렉토리 복사 (모든 해상도 아이콘)
+    if [[ -d "FocusTimer.iconset" ]]; then
+        cp -r "FocusTimer.iconset" "/Applications/FocusTimer.app/Contents/Resources/"
+        log_info "아이콘셋 디렉토리 설치 완료"
+    else
+        log_warn "아이콘셋 디렉토리를 찾을 수 없습니다."
+    fi
+
+    # 디렉토리 복사
+    if [[ -d "FocusTimer.app/Contents/Resources/user_data" ]]; then
+        cp -r "FocusTimer.app/Contents/Resources/user_data" "/Applications/FocusTimer.app/Contents/Resources/"
+        log_info "사용자 데이터 디렉토리 설치 완료"
+    fi
+
+    if [[ -d "FocusTimer.app/Contents/Resources/cache" ]]; then
+        cp -r "FocusTimer.app/Contents/Resources/cache" "/Applications/FocusTimer.app/Contents/Resources/"
+        log_info "캐시 디렉토리 설치 완료"
+    fi
+
+    # __pycache__ 디렉토리 제거 (재생성됨)
+    if [[ -d "/Applications/FocusTimer.app/Contents/Resources/__pycache__" ]]; then
+        rm -rf "/Applications/FocusTimer.app/Contents/Resources/__pycache__"
+        log_info "__pycache__ 디렉토리 정리 완료"
+    fi
+
     log_info "리소스 파일 설치 완료"
 }
 
@@ -423,6 +502,10 @@ create_default_info_plist() {
     <true/>
     <key>LSApplicationCategoryType</key>
     <string>public.app-category.productivity</string>
+    <key>CFBundleIconFile</key>
+    <string>FocusTimer.icns</string>
+    <key>CFBundleIconName</key>
+    <string>FocusTimer</string>
 </dict>
 </plist>
 EOF
@@ -633,10 +716,12 @@ show_completion_message() {
     echo -e "${GREEN}🎉 FocusTimer App 구조 설치가 완료되었습니다!${NC}"
     echo -e "${BLUE}📦 버전: $CURRENT_VERSION${NC}"
     echo
-    echo -e "${BLUE}📱 사용 방법:${NC}"
-    echo "  • GUI 앱: Applications 폴더에서 FocusTimer 실행"
-    echo "  • CLI 도구: 터미널에서 'focus-timer --help' 실행"
-    echo "  • 백그라운드 서비스: 자동으로 시작됩니다"
+            echo -e "${BLUE}📱 사용 방법:${NC}"
+        echo "  • GUI 앱: Applications 폴더에서 FocusTimer 실행"
+        echo "  • CLI 도구: 터미널에서 'focus-timer --help' 실행"
+        echo "  • 백그라운드 서비스: 자동으로 시작됩니다"
+        echo "  • 알고리즘 탭: GUI에서 알고리즘 문제 풀이 기능"
+        echo "  • 집중모드 강화: 시간대 검증 및 해제 방지 기능"
     echo
     echo -e "${BLUE}📁 설치 위치:${NC}"
     echo "  • 앱: /Applications/FocusTimer.app"
@@ -704,6 +789,17 @@ validate_source_files() {
         "FocusTimer.app/Contents/Resources/config.json"
         "FocusTimer.app/Contents/Info.plist"
         "FocusTimer.app/Contents/Resources/com.focustimer.helper.plist"
+        "FocusTimer.app/Contents/Resources/algorithm_tab.py"
+        "FocusTimer.app/Contents/Resources/gui_algorithm_manager.py"
+        "FocusTimer.app/Contents/Resources/advanced_challenge_system.py"
+        "FocusTimer.app/Contents/Resources/user_progress_tracker.py"
+        "FocusTimer.app/Contents/Resources/problem_data_structures.py"
+        "FocusTimer.app/Contents/Resources/remote_problem_provider.py"
+        "FocusTimer.app/Contents/Resources/example_problems.py"
+        "FocusTimer.app/Contents/Resources/import_utils.py"
+        "FocusTimer.app/Contents/Resources/integrated_focus_timer.py"
+        "FocusTimer.icns"
+        "FocusTimer.iconset"
     )
 
     for file in "${required_files[@]}"; do
