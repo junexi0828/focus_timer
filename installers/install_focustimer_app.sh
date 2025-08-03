@@ -159,28 +159,31 @@ check_requirements() {
     log_info "시스템 요구사항 확인 완료"
 }
 
-# 가상환경 설정
+# 앱 내부 가상환경 설정
 setup_virtual_environment() {
-    log_step "Python 가상환경 설정 중..."
+    log_step "앱 내부 가상환경 설정 중..."
 
-    # 현재 스크립트 위치 기준으로 가상환경 경로 설정
-    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-    VENV_PATH="$SCRIPT_DIR/../focus_timer_env"
+    # 앱 내부 가상환경 경로 설정
+    APP_VENV_PATH="/Applications/FocusTimer.app/Contents/MacOS/venv"
 
-    if [[ ! -d "$VENV_PATH" ]]; then
-        log_info "가상환경 생성 중: $VENV_PATH"
-        python3 -m venv "$VENV_PATH"
+    # 기존 외부 가상환경 경로 (백업용)
+    EXTERNAL_VENV_PATH="$SCRIPT_DIR/../focus_timer_env"
+
+    # 앱 내부 가상환경 생성
+    if [[ ! -d "$APP_VENV_PATH" ]]; then
+        log_info "앱 내부 가상환경 생성 중: $APP_VENV_PATH"
+        python3 -m venv "$APP_VENV_PATH"
     else
-        log_info "기존 가상환경 발견: $VENV_PATH"
+        log_info "기존 앱 내부 가상환경 발견: $APP_VENV_PATH"
     fi
 
-    # 가상환경 활성화
-    source "$VENV_PATH/bin/activate"
+    # 앱 내부 가상환경 활성화
+    source "$APP_VENV_PATH/bin/activate"
 
     # 필수 패키지 설치
     log_info "필수 패키지 설치 중..."
     pip install --upgrade pip
-    pip install watchdog psutil
+    pip install watchdog==6.0.0 psutil==6.1.0
 
     # 선택적 패키지 설치
     read -p "웹 인터페이스를 설치하시겠습니까? (y/n): " install_web
@@ -188,7 +191,8 @@ setup_virtual_environment() {
         pip install flask requests
     fi
 
-    log_info "가상환경 설정 완료"
+    log_info "앱 내부 가상환경 설정 완료"
+    log_info "가상환경 위치: $APP_VENV_PATH"
 }
 
 # 앱 구조 생성
@@ -426,9 +430,8 @@ EOF
 
 # 기본 LaunchAgent 생성
 create_default_launch_agent() {
-    # 현재 스크립트 위치 기준으로 가상환경 경로 설정
-    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-    VENV_PATH="$SCRIPT_DIR/../focus_timer_env"
+    # 앱 내부 가상환경 경로 설정
+    APP_VENV_PATH="/Applications/FocusTimer.app/Contents/MacOS/venv"
 
     cat > "/Applications/FocusTimer.app/Contents/Resources/com.focustimer.helper.plist" << EOF
 <?xml version="1.0" encoding="UTF-8"?>
@@ -439,7 +442,7 @@ create_default_launch_agent() {
     <string>com.focustimer.helper</string>
     <key>ProgramArguments</key>
     <array>
-        <string>$VENV_PATH/bin/python</string>
+        <string>$APP_VENV_PATH/bin/python</string>
         <string>/Applications/FocusTimer.app/Contents/MacOS/FocusTimerHelper</string>
     </array>
     <key>RunAtLoad</key>

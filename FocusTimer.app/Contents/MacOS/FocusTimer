@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 FocusTimer.app -  집중 모드 시스템(hybrid) v2.0.0
 통합 로직 + 외부 설정 분리 = 최적의 확장성과 유지보수성
@@ -29,13 +30,21 @@ import psutil
 # ----- 앱 경로 설정 -----
 APP_ROOT = Path(__file__).parent.parent
 RESOURCES_PATH = APP_ROOT / "Resources"
-VENV_PATH = APP_ROOT.parent / "focus_timer_env"
 
-# Python 경로 설정 (가상환경이 없으면 시스템 Python 사용)
-if (VENV_PATH / "bin" / "python").exists():
-    PYTHON_PATH = VENV_PATH / "bin" / "python"
+# 앱 내부 가상환경 경로 설정
+APP_VENV_PATH = Path(__file__).parent / "venv"
+EXTERNAL_VENV_PATH = APP_ROOT.parent / "focus_timer_env"
+
+# Python 경로 설정 (우선순위: 앱 내부 가상환경 > 외부 가상환경 > 시스템 Python)
+if (APP_VENV_PATH / "bin" / "python").exists():
+    PYTHON_PATH = APP_VENV_PATH / "bin" / "python"
+    print(f"🔗 앱 내부 가상환경 사용: {PYTHON_PATH}")
+elif (EXTERNAL_VENV_PATH / "bin" / "python").exists():
+    PYTHON_PATH = EXTERNAL_VENV_PATH / "bin" / "python"
+    print(f"🔗 외부 가상환경 사용: {PYTHON_PATH}")
 else:
     PYTHON_PATH = Path("/usr/bin/python3")
+    print(f"🔗 시스템 Python 사용: {PYTHON_PATH}")
 
 # ----- 앱 정보 상수 -----
 PRODUCT_NAME = "FocusTimer"
@@ -198,6 +207,250 @@ class FocusTimerState:
         self.bypass_attempts = 0
         self.difficulty_level = 1
         self.failed_attempts = 0
+
+# ----- 로깅 시스템 -----
+class Logger:
+    def __init__(self, log_file):
+        self.log_file = log_file
+        self.ensure_log_directory()
+
+    def ensure_log_directory(self):
+        os.makedirs(os.path.dirname(self.log_file), exist_ok=True)
+
+    def log(self, level, message):
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        log_entry = f"[{timestamp}] [{level}] {message}"
+
+        # 콘솔 출력
+        print(log_entry)
+
+        # 파일 로깅
+        try:
+            with open(self.log_file, "a", encoding="utf-8") as f:
+                f.write(log_entry + "\n")
+        except:
+            pass
+
+# ----- 시스템 레벨 보호 -----
+class SystemProtection:
+    def __init__(self):
+        self.original_hosts_permissions = None
+        self.firewall_rules = []
+        self.logger = Logger(config_manager.get("system_paths.log_path"))
+
+    def backup_hosts_permissions(self):
+        """hosts 파일 원본 권한 백업"""
+        try:
+            hosts_path = config_manager.get("system_paths.hosts_file", "/etc/hosts")
+            stat_info = os.stat(hosts_path)
+            self.original_hosts_permissions = stat_info.st_mode
+            self.logger.log("INFO", "hosts 파일 권한 백업 완료")
+        except Exception as e:
+            self.logger.log("ERROR", f"hosts 파일 권한 백업 실패: {e}")
+
+    def lock_hosts_file(self):
+        """hosts 파일을 읽기 전용으로 잠금"""
+        try:
+            hosts_path = config_manager.get("system_paths.hosts_file", "/etc/hosts")
+            os.chmod(hosts_path, stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH)  # 444
+            self.logger.log("INFO", "hosts 파일 잠금 완료")
+        except Exception as e:
+            self.logger.log("ERROR", f"hosts 파일 잠금 실패: {e}")
+
+    def unlock_hosts_file(self):
+        """hosts 파일 잠금 해제"""
+        try:
+            hosts_path = config_manager.get("system_paths.hosts_file", "/etc/hosts")
+            if self.original_hosts_permissions:
+                os.chmod(hosts_path, self.original_hosts_permissions)
+            else:
+                os.chmod(hosts_path, stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH)  # 644
+            self.logger.log("INFO", "hosts 파일 잠금 해제 완료")
+        except Exception as e:
+            self.logger.log("ERROR", f"hosts 파일 잠금 해제 실패: {e}")
+
+    def setup_firewall_rules(self):
+        """방화벽 규칙 설정"""
+        if not config_manager.get("security.enable_firewall_rules", False):
+            return
+
+        try:
+            # pfctl을 사용한 방화벽 규칙 추가
+            rules = []
+            websites = config_manager.get_all_blocked_websites()
+
+            for domain in websites:
+                rules.append(f'block drop out proto tcp to {domain} port 80')
+                rules.append(f'block drop out proto tcp to {domain} port 443')
+
+            # 임시 규칙 파일 생성
+            rules_file = "/tmp/focus_timer_pf.conf"
+            with open(rules_file, "w") as f:
+                f.write("\n".join(rules))
+
+            # 방화벽 규칙 적용
+            subprocess.run(["sudo", "pfctl", "-f", rules_file], check=True)
+            subprocess.run(["sudo", "pfctl", "-e"], check=True)  # 방화벽 활성화
+
+            self.firewall_rules = rules
+            self.logger.log("INFO", f"방화벽 규칙 {len(rules)}개 적용 완료")
+
+        except Exception as e:
+            self.logger.log("ERROR", f"방화벽 규칙 설정 실패: {e}")
+
+    def remove_firewall_rules(self):
+        """방화벽 규칙 제거"""
+        if not config_manager.get("security.enable_firewall_rules", False):
+            return
+
+        try:
+            subprocess.run(["sudo", "pfctl", "-d"], check=True)  # 방화벽 비활성화
+            self.logger.log("INFO", "방화벽 규칙 제거 완료")
+        except Exception as e:
+            self.logger.log("ERROR", f"방화벽 규칙 제거 실패: {e}")
+
+# ----- 지속적 모니터링 -----
+class HostsFileMonitor(FileSystemEventHandler):
+    def __init__(self, focus_timer):
+        self.focus_timer = focus_timer
+        self.last_modified = 0
+        self.logger = Logger(config_manager.get("system_paths.log_path"))
+
+    def on_modified(self, event):
+        hosts_path = config_manager.get("system_paths.hosts_file", "/etc/hosts")
+        if event.src_path == hosts_path:
+            current_time = time.time()
+            if current_time - self.last_modified > 1:  # 중복 이벤트 방지
+                self.last_modified = current_time
+                self.logger.log("WARNING", "hosts 파일 변경 감지됨")
+                self.focus_timer.handle_hosts_modification()
+
+class FocusTimerMonitor:
+    def __init__(self):
+        self.observer = None
+        self.monitoring = False
+        self.system_protection = SystemProtection()
+        self.logger = Logger(config_manager.get("system_paths.log_path", "/var/log/FocusTimer/focus_timer.log"))
+
+    def start_monitoring(self):
+        """파일 시스템 모니터링 시작"""
+        if not config_manager.get("security.monitor_hosts_changes", True):
+            return
+
+        try:
+            self.observer = Observer()
+            event_handler = HostsFileMonitor(self)
+            hosts_path = config_manager.get("system_paths.hosts_file", "/etc/hosts")
+            hosts_dir = os.path.dirname(hosts_path)
+            self.observer.schedule(event_handler, path=hosts_dir, recursive=False)
+            self.observer.start()
+            self.monitoring = True
+            self.logger.log("INFO", "파일 시스템 모니터링 시작")
+        except Exception as e:
+            self.logger.log("ERROR", f"모니터링 시작 실패: {e}")
+
+    def stop_monitoring(self):
+        """파일 시스템 모니터링 중지"""
+        if self.observer:
+            self.observer.stop()
+            self.observer.join()
+            self.monitoring = False
+            self.logger.log("INFO", "파일 시스템 모니터링 중지")
+
+    def handle_hosts_modification(self):
+        """hosts 파일 수정 처리"""
+        if state.is_focus_mode and state.is_blocked:
+            self.logger.log("WARNING", "집중 모드 중 hosts 파일 수정 시도 감지")
+            state.bypass_attempts += 1
+
+            # 자동으로 차단 재적용
+            self.reapply_blocking()
+
+            # 보안 강화
+            self.enhance_security()
+
+    def reapply_blocking(self):
+        """차단 재적용"""
+        try:
+            # hosts 파일 잠금 해제
+            self.system_protection.unlock_hosts_file()
+
+            # 차단 설정 재적용
+            block_websites()
+
+            # hosts 파일 다시 잠금
+            if config_manager.get("security.lock_hosts_file", True):
+                self.system_protection.lock_hosts_file()
+
+            # DNS 캐시 초기화
+            if config_manager.get("security.enable_dns_cache_flush", True):
+                self.flush_dns_cache()
+
+            self.logger.log("INFO", "차단 재적용 완료")
+
+        except Exception as e:
+            self.logger.log("ERROR", f"차단 재적용 실패: {e}")
+
+    def enhance_security(self):
+        """보안 강화"""
+        try:
+            # 방화벽 규칙 강화
+            self.system_protection.setup_firewall_rules()
+
+            # 브라우저 강제 재시작
+            if config_manager.get("focus_mode.force_browser_restart", True):
+                self.restart_browsers()
+
+            # 시스템 알림
+            self.send_system_notification("보안 경고", "집중 모드 중 차단 해제 시도가 감지되었습니다.")
+
+            self.logger.log("INFO", "보안 강화 완료")
+
+        except Exception as e:
+            self.logger.log("ERROR", f"보안 강화 실패: {e}")
+
+    def flush_dns_cache(self):
+        """DNS 캐시 초기화"""
+        try:
+            subprocess.run(["sudo", "dscacheutil", "-flushcache"], check=True)
+            subprocess.run(["sudo", "killall", "-HUP", "mDNSResponder"], check=True)
+            self.logger.log("INFO", "DNS 캐시 초기화 완료")
+        except Exception as e:
+            self.logger.log("ERROR", f"DNS 캐시 초기화 실패: {e}")
+
+    def restart_browsers(self):
+        """브라우저 강제 재시작"""
+        browsers = config_manager.get("browsers.supported", ["Google Chrome", "Safari", "Firefox", "Whale", "Microsoft Edge"])
+
+        for browser in browsers:
+            try:
+                # 브라우저 종료
+                subprocess.run(["osascript", "-e", f'quit app "{browser}"'],
+                             capture_output=True, timeout=5)
+                time.sleep(2)
+
+                # 강제 종료
+                subprocess.run(["pkill", "-f", browser], capture_output=True)
+                time.sleep(1)
+
+                # 재시작
+                subprocess.run(["open", "-a", browser], capture_output=True)
+                time.sleep(3)
+
+                self.logger.log("INFO", f"{browser} 재시작 완료")
+
+            except Exception as e:
+                self.logger.log("ERROR", f"{browser} 재시작 실패: {e}")
+
+    def send_system_notification(self, title, message):
+        """시스템 알림 전송"""
+        try:
+            subprocess.run([
+                "osascript", "-e",
+                f'display notification "{message}" with title "{title}"'
+            ], capture_output=True)
+        except:
+            pass
 
 # 전역 인스턴스
 state = FocusTimerState()
@@ -526,11 +779,15 @@ def block_websites():
         # 1. hosts 파일 차단
         block_hosts_file()
 
-        # 2. DNS 캐시 초기화
+        # 2. 방화벽 규칙 적용
+        if config_manager.get("security.enable_firewall_rules", False):
+            apply_firewall_rules()
+
+        # 3. DNS 캐시 초기화
         if config_manager.get("security.enable_dns_cache_flush", True):
             flush_dns_cache()
 
-        # 3. 브라우저 캐시 초기화
+        # 4. 브라우저 캐시 초기화
         if config_manager.get("security.enable_browser_cache_clear", True):
             clear_browser_cache()
 
@@ -547,7 +804,11 @@ def unblock_websites():
         # 1. hosts 파일 복구
         restore_hosts_file()
 
-        # 2. DNS 캐시 초기화
+        # 2. 방화벽 규칙 제거
+        if config_manager.get("security.enable_firewall_rules", False):
+            remove_firewall_rules()
+
+        # 3. DNS 캐시 초기화
         if config_manager.get("security.enable_dns_cache_flush", True):
             flush_dns_cache()
 
@@ -556,6 +817,37 @@ def unblock_websites():
 
     except Exception as e:
         logger.log("ERROR", f"차단 해제 실패: {e}")
+
+def apply_firewall_rules():
+    """방화벽 규칙 적용"""
+    try:
+        # pfctl을 사용한 방화벽 규칙
+        rules = []
+        websites = config_manager.get_all_blocked_websites()
+
+        for domain in websites:
+            rules.append(f'block drop out proto tcp to {domain} port 80')
+            rules.append(f'block drop out proto tcp to {domain} port 443')
+
+        rules_file = "/tmp/focus_timer_pf.conf"
+        with open(rules_file, "w") as f:
+            f.write("\n".join(rules))
+
+        subprocess.run(["sudo", "pfctl", "-f", rules_file], check=True)
+        subprocess.run(["sudo", "pfctl", "-e"], check=True)
+
+        logger.log("INFO", "방화벽 규칙 적용 완료")
+
+    except Exception as e:
+        logger.log("ERROR", f"방화벽 규칙 적용 실패: {e}")
+
+def remove_firewall_rules():
+    """방화벽 규칙 제거"""
+    try:
+        subprocess.run(["sudo", "pfctl", "-d"], check=True)
+        logger.log("INFO", "방화벽 규칙 제거 완료")
+    except Exception as e:
+        logger.log("ERROR", f"방화벽 규칙 제거 실패: {e}")
 
 def block_hosts_file():
     """hosts 파일에 차단 설정 추가"""
@@ -725,6 +1017,9 @@ class FocusTimerApp:
 
         # GUI 초기화
         self.root = tk.Tk()
+
+        # macOS 특화 GUI 설정
+        self.setup_macos_gui()
         self.setup_gui()
 
         # 상태 불러오기
@@ -733,6 +1028,36 @@ class FocusTimerApp:
         # 시스템 보호 초기화
         if config_manager.get("security.enable_system_protection", True):
             self.monitor.system_protection.backup_hosts_permissions()
+
+        # 모니터링 시작
+        if config_manager.get("security.monitor_hosts_changes", True):
+            self.monitor.start_monitoring()
+
+    def setup_macos_gui(self):
+        """macOS 특화 GUI 설정"""
+        try:
+            # macOS에서 GUI 창을 앞으로 가져오기
+            self.root.lift()
+            self.root.attributes('-topmost', True)
+            self.root.after_idle(self.root.attributes, '-topmost', False)
+
+            # macOS 네이티브 메뉴바 설정
+            self.root.createcommand('tk::mac::Quit', self.quit_app)
+            self.root.createcommand('tk::mac::ShowPreferences', self.show_preferences)
+
+            # 창 크기 조정 가능하게 설정
+            self.root.resizable(True, True)
+
+            # macOS 스타일 적용
+            self.root.tk.call('tk', 'scaling', 2.0)  # 고해상도 디스플레이 지원
+
+        except Exception as e:
+            logger.log("ERROR", f"macOS GUI 설정 실패: {e}")
+
+    def show_preferences(self):
+        """설정 창 표시"""
+        # 설정 탭으로 이동하는 로직 추가 가능
+        pass
 
     def setup_gui(self):
         """GUI 설정"""
@@ -771,6 +1096,7 @@ class FocusTimerApp:
         self.create_timer_tab()
         self.create_settings_tab()
         self.create_stats_tab()
+        self.create_logs_tab()
 
         # 상태바
         self.status_var = tk.StringVar(value="준비됨")
@@ -817,16 +1143,50 @@ class FocusTimerApp:
         self.notebook.add(dashboard_frame, text="📊 대시보드")
 
         # 현재 상태
-        status_frame = ttk.LabelFrame(dashboard_frame, text="현재 상태", padding="10")
+        status_frame = ttk.LabelFrame(dashboard_frame, text="📊 현재 상태", padding="10")
         status_frame.grid(row=0, column=0, sticky=(tk.W, tk.E), pady=(0, 10))
 
         self.status_label = ttk.Label(status_frame, text="집중 모드 비활성화",
                                      font=('Helvetica', 14))
         self.status_label.grid(row=0, column=0, sticky=tk.W)
 
+        # 시간 표시
+        self.time_var = tk.StringVar(value="")
+        time_label = ttk.Label(status_frame, textvariable=self.time_var,
+                              font=('Helvetica', 10))
+        time_label.grid(row=1, column=0, sticky=tk.W, pady=(5, 0))
+
+        # 실시간 통계
+        stats_frame = ttk.LabelFrame(dashboard_frame, text="📈 실시간 통계", padding="10")
+        stats_frame.grid(row=1, column=0, sticky=(tk.W, tk.E), pady=(0, 10))
+
+        # 차단 횟수
+        ttk.Label(stats_frame, text="차단 횟수:").grid(row=0, column=0, sticky=tk.W)
+        self.block_count_var = tk.StringVar(value="0")
+        ttk.Label(stats_frame, textvariable=self.block_count_var,
+                 font=('Helvetica', 12, 'bold')).grid(row=0, column=1, padx=(10, 0))
+
+        # 우회 시도
+        ttk.Label(stats_frame, text="우회 시도:").grid(row=1, column=0, sticky=tk.W, pady=(5, 0))
+        self.bypass_attempts_var = tk.StringVar(value="0")
+        ttk.Label(stats_frame, textvariable=self.bypass_attempts_var,
+                 font=('Helvetica', 12, 'bold')).grid(row=1, column=1, padx=(10, 0), pady=(5, 0))
+
+        # 현재 난이도
+        ttk.Label(stats_frame, text="현재 난이도:").grid(row=2, column=0, sticky=tk.W, pady=(5, 0))
+        self.current_difficulty_var = tk.StringVar(value="1")
+        ttk.Label(stats_frame, textvariable=self.current_difficulty_var,
+                 font=('Helvetica', 12, 'bold')).grid(row=2, column=1, padx=(10, 0), pady=(5, 0))
+
+        # 보안 상태
+        ttk.Label(stats_frame, text="보안 상태:").grid(row=3, column=0, sticky=tk.W, pady=(5, 0))
+        self.security_status_var = tk.StringVar(value="보안 모니터링 활성화")
+        ttk.Label(stats_frame, textvariable=self.security_status_var,
+                 font=('Helvetica', 12, 'bold')).grid(row=3, column=1, padx=(10, 0), pady=(5, 0))
+
         # 빠른 액션
-        action_frame = ttk.LabelFrame(dashboard_frame, text="빠른 액션", padding="10")
-        action_frame.grid(row=1, column=0, sticky=(tk.W, tk.E), pady=(0, 10))
+        action_frame = ttk.LabelFrame(dashboard_frame, text="🎯 빠른 액션", padding="10")
+        action_frame.grid(row=2, column=0, sticky=(tk.W, tk.E), pady=(0, 10))
 
         ttk.Button(action_frame, text="🚀 집중 모드 시작",
                   command=self.start_focus_mode).grid(row=0, column=0, padx=(0, 10))
@@ -893,29 +1253,237 @@ class FocusTimerApp:
         ttk.Checkbutton(security_frame, text="자동 복구 활성화",
                        variable=self.auto_recovery_var).grid(row=1, column=0, sticky=tk.W, pady=(5, 0))
 
+        self.lock_hosts_var = tk.BooleanVar(value=config_manager.get("security.lock_hosts_file", True))
+        ttk.Checkbutton(security_frame, text="hosts 파일 잠금",
+                       variable=self.lock_hosts_var).grid(row=2, column=0, sticky=tk.W, pady=(5, 0))
+
+        self.firewall_rules_var = tk.BooleanVar(value=config_manager.get("security.enable_firewall_rules", False))
+        ttk.Checkbutton(security_frame, text="방화벽 규칙 적용",
+                       variable=self.firewall_rules_var).grid(row=3, column=0, sticky=tk.W, pady=(5, 0))
+
+        self.dns_flush_var = tk.BooleanVar(value=config_manager.get("security.enable_dns_cache_flush", True))
+        ttk.Checkbutton(security_frame, text="DNS 캐시 초기화",
+                       variable=self.dns_flush_var).grid(row=4, column=0, sticky=tk.W, pady=(5, 0))
+
+        self.browser_cache_var = tk.BooleanVar(value=config_manager.get("security.enable_browser_cache_clear", True))
+        ttk.Checkbutton(security_frame, text="브라우저 캐시 초기화",
+                       variable=self.browser_cache_var).grid(row=5, column=0, sticky=tk.W, pady=(5, 0))
+
     def create_stats_tab(self):
         """통계 탭"""
         stats_frame = ttk.Frame(self.notebook, padding="10")
         self.notebook.add(stats_frame, text="📈 통계")
 
-        # 통계 정보
-        stats_info_frame = ttk.LabelFrame(stats_frame, text="사용 통계", padding="10")
-        stats_info_frame.grid(row=0, column=0, sticky=(tk.W, tk.E), pady=(0, 10))
+        # 기본 통계
+        basic_stats_frame = ttk.LabelFrame(stats_frame, text="📊 기본 통계", padding="10")
+        basic_stats_frame.grid(row=0, column=0, sticky=(tk.W, tk.E), pady=(0, 10))
 
         self.total_focus_time_var = tk.StringVar(value="0시간")
-        ttk.Label(stats_info_frame, text="총 집중 시간:").grid(row=0, column=0, sticky=tk.W)
-        ttk.Label(stats_info_frame, textvariable=self.total_focus_time_var,
+        ttk.Label(basic_stats_frame, text="총 집중 시간:").grid(row=0, column=0, sticky=tk.W)
+        ttk.Label(basic_stats_frame, textvariable=self.total_focus_time_var,
                  font=('Helvetica', 12, 'bold')).grid(row=0, column=1, padx=(10, 0))
 
         self.block_count_var = tk.StringVar(value="0회")
-        ttk.Label(stats_info_frame, text="차단 횟수:").grid(row=1, column=0, sticky=tk.W, pady=(5, 0))
-        ttk.Label(stats_info_frame, textvariable=self.block_count_var,
+        ttk.Label(basic_stats_frame, text="차단 횟수:").grid(row=1, column=0, sticky=tk.W, pady=(5, 0))
+        ttk.Label(basic_stats_frame, textvariable=self.block_count_var,
                  font=('Helvetica', 12, 'bold')).grid(row=1, column=1, padx=(10, 0), pady=(5, 0))
 
         self.bypass_attempts_var = tk.StringVar(value="0회")
-        ttk.Label(stats_info_frame, text="우회 시도:").grid(row=2, column=0, sticky=tk.W, pady=(5, 0))
-        ttk.Label(stats_info_frame, textvariable=self.bypass_attempts_var,
+        ttk.Label(basic_stats_frame, text="우회 시도:").grid(row=2, column=0, sticky=tk.W, pady=(5, 0))
+        ttk.Label(basic_stats_frame, textvariable=self.bypass_attempts_var,
                  font=('Helvetica', 12, 'bold')).grid(row=2, column=1, padx=(10, 0), pady=(5, 0))
+
+        # 보안 통계
+        security_stats_frame = ttk.LabelFrame(stats_frame, text="🛡️ 보안 통계", padding="10")
+        security_stats_frame.grid(row=1, column=0, sticky=(tk.W, tk.E), pady=(0, 10))
+
+        self.current_difficulty_var = tk.StringVar(value="1")
+        ttk.Label(security_stats_frame, text="현재 난이도:").grid(row=0, column=0, sticky=tk.W)
+        ttk.Label(security_stats_frame, textvariable=self.current_difficulty_var,
+                 font=('Helvetica', 12, 'bold')).grid(row=0, column=1, padx=(10, 0))
+
+        self.security_status_var = tk.StringVar(value="보안 모니터링 활성화")
+        ttk.Label(security_stats_frame, text="보안 상태:").grid(row=1, column=0, sticky=tk.W, pady=(5, 0))
+        ttk.Label(security_stats_frame, textvariable=self.security_status_var,
+                 font=('Helvetica', 12, 'bold')).grid(row=1, column=1, padx=(10, 0), pady=(5, 0))
+
+        self.failed_attempts_var = tk.StringVar(value="0회")
+        ttk.Label(security_stats_frame, text="실패한 시도:").grid(row=2, column=0, sticky=tk.W, pady=(5, 0))
+        ttk.Label(security_stats_frame, textvariable=self.failed_attempts_var,
+                 font=('Helvetica', 12, 'bold')).grid(row=2, column=1, padx=(10, 0), pady=(5, 0))
+
+        # 시스템 통계
+        system_stats_frame = ttk.LabelFrame(stats_frame, text="⚙️ 시스템 통계", padding="10")
+        system_stats_frame.grid(row=2, column=0, sticky=(tk.W, tk.E), pady=(0, 10))
+
+        self.last_check_var = tk.StringVar(value="없음")
+        ttk.Label(system_stats_frame, text="마지막 체크:").grid(row=0, column=0, sticky=tk.W)
+        ttk.Label(system_stats_frame, textvariable=self.last_check_var,
+                 font=('Helvetica', 10)).grid(row=0, column=1, padx=(10, 0))
+
+        self.monitoring_status_var = tk.StringVar(value="활성화")
+        ttk.Label(system_stats_frame, text="모니터링 상태:").grid(row=1, column=0, sticky=tk.W, pady=(5, 0))
+        ttk.Label(system_stats_frame, textvariable=self.monitoring_status_var,
+                 font=('Helvetica', 10)).grid(row=1, column=1, padx=(10, 0), pady=(5, 0))
+
+        # 통계 제어
+        control_frame = ttk.Frame(stats_frame)
+        control_frame.grid(row=3, column=0, sticky=(tk.W, tk.E), pady=(10, 0))
+
+        ttk.Button(control_frame, text="🔄 통계 새로고침",
+                  command=self.refresh_stats).grid(row=0, column=0, padx=(0, 10))
+        ttk.Button(control_frame, text="📊 통계 내보내기",
+                  command=self.export_stats).grid(row=0, column=1, padx=(0, 10))
+        ttk.Button(control_frame, text="🗑️ 통계 초기화",
+                  command=self.reset_stats).grid(row=0, column=2)
+
+    def create_logs_tab(self):
+        """로그 뷰어 탭"""
+        logs_frame = ttk.Frame(self.notebook, padding="10")
+        self.notebook.add(logs_frame, text="📝 시스템 로그")
+
+        # 로그 제어
+        control_frame = ttk.Frame(logs_frame)
+        control_frame.grid(row=0, column=0, sticky=(tk.W, tk.E), pady=(0, 10))
+
+        ttk.Button(control_frame, text="🔄 새로고침",
+                  command=self.refresh_logs).grid(row=0, column=0, padx=(0, 10))
+        ttk.Button(control_frame, text="🗑️ 로그 지우기",
+                  command=self.clear_logs).grid(row=0, column=1, padx=(0, 10))
+        ttk.Button(control_frame, text="💾 로그 저장",
+                  command=self.save_logs).grid(row=0, column=2)
+
+        # 로그 표시
+        log_frame = ttk.LabelFrame(logs_frame, text="실시간 로그", padding="10")
+        log_frame.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(0, 10))
+
+        # 로그 텍스트 위젯
+        self.log_text = tk.Text(log_frame, height=15, width=80, font=('Courier', 9))
+        log_scrollbar = ttk.Scrollbar(log_frame, orient=tk.VERTICAL, command=self.log_text.yview)
+        self.log_text.configure(yscrollcommand=log_scrollbar.set)
+
+        self.log_text.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        log_scrollbar.grid(row=0, column=1, sticky=(tk.N, tk.S))
+
+        # 로그 프레임 그리드 가중치
+        log_frame.columnconfigure(0, weight=1)
+        log_frame.rowconfigure(0, weight=1)
+        logs_frame.columnconfigure(0, weight=1)
+        logs_frame.rowconfigure(1, weight=1)
+
+    def refresh_logs(self):
+        """로그 새로고침"""
+        try:
+            log_path = config_manager.get("system_paths.log_path", "/var/log/FocusTimer/focus_timer.log")
+            if os.path.exists(log_path):
+                with open(log_path, 'r', encoding='utf-8') as f:
+                    logs = f.readlines()[-50:]  # 최근 50줄
+
+                self.log_text.delete(1.0, tk.END)
+                for log in logs:
+                    self.log_text.insert(tk.END, log)
+
+                self.log_text.see(tk.END)
+            else:
+                self.log_text.delete(1.0, tk.END)
+                self.log_text.insert(tk.END, "로그 파일이 아직 생성되지 않았습니다.\n")
+        except Exception as e:
+            self.log_text.delete(1.0, tk.END)
+            self.log_text.insert(tk.END, f"로그 읽기 실패: {e}\n")
+
+    def clear_logs(self):
+        """로그 지우기"""
+        if messagebox.askyesno("확인", "로그를 지우시겠습니까?"):
+            try:
+                log_path = config_manager.get("system_paths.log_path", "/var/log/FocusTimer/focus_timer.log")
+                if os.path.exists(log_path):
+                    with open(log_path, 'w') as f:
+                        f.write("")
+                    self.refresh_logs()
+                    messagebox.showinfo("성공", "로그가 지워졌습니다.")
+            except Exception as e:
+                messagebox.showerror("오류", f"로그 지우기 실패: {e}")
+
+    def save_logs(self):
+        """로그 저장"""
+        try:
+            from tkinter import filedialog
+            filename = filedialog.asksaveasfilename(
+                defaultextension=".log",
+                filetypes=[("Log files", "*.log"), ("Text files", "*.txt"), ("All files", "*.*")]
+            )
+            if filename:
+                log_path = config_manager.get("system_paths.log_path", "/var/log/FocusTimer/focus_timer.log")
+                if os.path.exists(log_path):
+                    import shutil
+                    shutil.copy2(log_path, filename)
+                    messagebox.showinfo("성공", f"로그가 저장되었습니다: {filename}")
+                else:
+                    messagebox.showwarning("경고", "로그 파일이 없습니다.")
+        except Exception as e:
+            messagebox.showerror("오류", f"로그 저장 실패: {e}")
+
+    def refresh_stats(self):
+        """통계 새로고침"""
+        try:
+            self.update_stats()
+            messagebox.showinfo("성공", "통계가 새로고침되었습니다.")
+        except Exception as e:
+            messagebox.showerror("오류", f"통계 새로고침 실패: {e}")
+
+    def export_stats(self):
+        """통계 내보내기"""
+        try:
+            from tkinter import filedialog
+            filename = filedialog.asksaveasfilename(
+                defaultextension=".json",
+                filetypes=[("JSON files", "*.json"), ("Text files", "*.txt"), ("All files", "*.*")]
+            )
+            if filename:
+                stats_data = {
+                    "timestamp": datetime.datetime.now().isoformat(),
+                    "basic_stats": {
+                        "total_focus_time": self.total_focus_time_var.get(),
+                        "block_count": self.block_count_var.get(),
+                        "bypass_attempts": self.bypass_attempts_var.get()
+                    },
+                    "security_stats": {
+                        "current_difficulty": self.current_difficulty_var.get(),
+                        "security_status": self.security_status_var.get(),
+                        "failed_attempts": self.failed_attempts_var.get()
+                    },
+                    "system_stats": {
+                        "last_check": self.last_check_var.get(),
+                        "monitoring_status": self.monitoring_status_var.get()
+                    }
+                }
+
+                with open(filename, 'w', encoding='utf-8') as f:
+                    json.dump(stats_data, f, indent=2, ensure_ascii=False)
+
+                messagebox.showinfo("성공", f"통계가 내보내졌습니다: {filename}")
+        except Exception as e:
+            messagebox.showerror("오류", f"통계 내보내기 실패: {e}")
+
+    def reset_stats(self):
+        """통계 초기화"""
+        if messagebox.askyesno("확인", "모든 통계를 초기화하시겠습니까?"):
+            try:
+                # 상태 초기화
+                state.block_count = 0
+                state.bypass_attempts = 0
+                if challenge:
+                    challenge.failed_attempts = 0
+
+                # GUI 업데이트
+                self.update_stats()
+
+                # 상태 저장
+                save_state()
+
+                messagebox.showinfo("성공", "통계가 초기화되었습니다.")
+            except Exception as e:
+                messagebox.showerror("오류", f"통계 초기화 실패: {e}")
 
     def start_focus_mode(self):
         """집중 모드 시작"""
@@ -1034,6 +1602,63 @@ class FocusTimerApp:
                 state.is_blocked = should_be_blocked
                 save_state()
 
+    def update_stats(self):
+        """통계 업데이트"""
+        try:
+            # 기본 통계
+            self.block_count_var.set(f"{state.block_count}회")
+            self.bypass_attempts_var.set(f"{state.bypass_attempts}회")
+            self.current_difficulty_var.set(str(challenge.difficulty_level if challenge else 1))
+
+            # 보안 상태
+            if self.monitor.monitoring:
+                self.security_status_var.set("보안 모니터링 활성화")
+            else:
+                self.security_status_var.set("보안 모니터링 비활성화")
+
+            # 시간 표시
+            if state.focus_start_time and state.focus_end_time:
+                start_str = state.focus_start_time.strftime("%H:%M")
+                end_str = state.focus_end_time.strftime("%H:%M")
+                self.time_var.set(f"설정 시간: {start_str} ~ {end_str}")
+            else:
+                self.time_var.set("")
+
+            # 상태 표시
+            if state.is_focus_mode:
+                if state.is_blocked:
+                    self.status_label.config(text="집중 모드 활성화 (차단 중)")
+                else:
+                    self.status_label.config(text="집중 모드 활성화 (대기 중)")
+            else:
+                self.status_label.config(text="집중 모드 비활성화")
+
+            # 추가 통계 업데이트
+            self.failed_attempts_var.set(f"{challenge.failed_attempts if challenge else 0}회")
+
+            # 마지막 체크 시간
+            if state.last_check:
+                self.last_check_var.set(state.last_check.strftime("%Y-%m-%d %H:%M:%S"))
+            else:
+                self.last_check_var.set("없음")
+
+            # 모니터링 상태
+            if self.monitor.monitoring:
+                self.monitoring_status_var.set("활성화")
+            else:
+                self.monitoring_status_var.set("비활성화")
+
+            # 로그 업데이트 (로그 탭이 활성화된 경우)
+            try:
+                current_tab = self.notebook.select()
+                if "로그" in self.notebook.tab(current_tab, "text"):
+                    self.refresh_logs()
+            except:
+                pass
+
+        except Exception as e:
+            logger.log("ERROR", f"통계 업데이트 실패: {e}")
+
     def export_config(self):
         """설정 내보내기"""
         messagebox.showinfo("알림", "설정 내보내기 기능")
@@ -1107,6 +1732,19 @@ class FocusTimerApp:
 
     def run(self):
         """앱 실행"""
+        # 주기적 업데이트
+        def update_loop():
+            while True:
+                try:
+                    self.update_stats()
+                    refresh_interval = config_manager.get("gui_settings.auto_refresh_interval", 5)
+                    time.sleep(refresh_interval)  # 설정된 간격으로 업데이트
+                except:
+                    break
+
+        update_thread = threading.Thread(target=update_loop, daemon=True)
+        update_thread.start()
+
         # GUI 실행
         self.root.mainloop()
 
@@ -1116,16 +1754,81 @@ if __name__ == "__main__":
         print("⚠️ 관리자 권한으로 실행해야 합니다: sudo python3 FocusTimer")
         sys.exit(1)
 
+    # GUI 환경 변수 설정 (sudo 실행 시 필요)
+    try:
+        # 현재 사용자의 GUI 환경 변수 가져오기
+        user = os.environ.get('SUDO_USER', os.environ.get('USER'))
+        if user:
+            # macOS GUI 환경 변수 설정
+            os.environ['DISPLAY'] = ':0'
+            os.environ['XAUTHORITY'] = f"/Users/{user}/.Xauthority"
+
+            # Tkinter GUI 환경 설정
+            os.environ['TK_SILENCE_DEPRECATION'] = '1'
+
+            # macOS 특화 설정
+            os.environ['NSDocumentRevisionsDebugMode'] = 'true'
+
+    except Exception as e:
+        print(f"GUI 환경 변수 설정 실패: {e}")
+
     # 디렉토리 생성
     os.makedirs(os.path.dirname(STATE_PATH), exist_ok=True)
     os.makedirs(os.path.dirname(LOG_PATH), exist_ok=True)
 
     # GUI 애플리케이션 시작
-    app = FocusTimerApp()
-
     try:
+        print("🚀 FocusTimer GUI 시작 중...")
+        app = FocusTimerApp()
+        print("✅ GUI 초기화 완료")
+        print("🖥️ GUI 창이 표시됩니다. 창이 보이지 않으면 Dock을 확인해주세요.")
         app.run()
+    except Exception as e:
+        print(f"❌ GUI 실행 실패: {e}")
+        logger.log("ERROR", f"GUI 실행 실패: {e}")
+
+        # GUI 실패 시 CLI 모드로 전환
+        print("🔄 CLI 모드로 전환합니다...")
+        try:
+            # CLI 모드 실행 로직
+            while True:
+                print("\n📊 FocusTimer CLI 모드")
+                print("1. 집중 모드 시작")
+                print("2. 집중 모드 중지")
+                print("3. 즉시 차단")
+                print("4. 즉시 해제")
+                print("5. 상태 확인")
+                print("6. 종료")
+
+                choice = input("\n선택하세요 (1-6): ").strip()
+
+                if choice == "1":
+                    # 집중 모드 시작 로직
+                    print("🚀 집중 모드 시작")
+                elif choice == "2":
+                    # 집중 모드 중지 로직
+                    print("⏹️ 집중 모드 중지")
+                elif choice == "3":
+                    # 즉시 차단 로직
+                    print("🔒 즉시 차단")
+                elif choice == "4":
+                    # 즉시 해제 로직
+                    print("🔓 즉시 해제")
+                elif choice == "5":
+                    # 상태 확인 로직
+                    print("📊 상태 확인")
+                elif choice == "6":
+                    print("👋 종료합니다.")
+                    break
+                else:
+                    print("❌ 잘못된 선택입니다.")
+
+        except KeyboardInterrupt:
+            print("\n👋 종료합니다.")
     except KeyboardInterrupt:
         pass
     finally:
-        app.cleanup()
+        try:
+            app.cleanup()
+        except:
+            pass

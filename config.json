@@ -1,0 +1,50 @@
+{
+  "app_info": {
+    "name": "Focus Timer Enterprise GUI",
+    "version": "2.0.0",
+    "description": "상업용 집중 모드 시스템"
+  },
+  "system_paths": {
+    "hosts_file": "/etc/hosts",
+    "redirect_ip": "127.0.0.1",
+    "backup_path": "/Library/Application Support/FocusTimer/hosts_backup",
+    "state_path": "/Library/Application Support/FocusTimer/state.json",
+    "lock_file": "/Library/Application Support/FocusTimer/focus_timer.lock",
+    "log_path": "/var/log/FocusTimer/focus_timer.log",
+    "pid_file": "/var/run/focus_timer.pid"
+  },
+  "blocked_websites": {
+    "youtube": [
+      "youtube.com",
+      "www.youtube.com",
+      "m.youtube.com",
+      "youtu.be"
+    ],
+    "social_media": [
+      "facebook.com",
+      "www.facebook.com",
+      "instagram.com",
+      "www.instagram.com"
+    ]
+  },
+  "focus_mode": {
+    "default_start_time": "09:00",
+    "default_end_time": "18:00",
+    "default_difficulty": 1,
+    "max_difficulty": 5,
+    "max_attempts": 3
+  },
+  "security": {
+    "enable_system_protection": true,
+    "enable_file_monitoring": true,
+    "enable_dns_cache_flush": true
+  },
+  "gui_settings": {
+    "window_size": {
+      "width": 800,
+      "height": 600
+    },
+    "theme": "clam",
+    "auto_refresh_interval": 5
+  }
+}
