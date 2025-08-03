@@ -1,0 +1,101 @@
+{
+  "problems": [
+    {
+      "id": "dbbceeef-c292-4fab-9b1d-0b8e3cbc9ed4",
+      "title": "Two Sum",
+      "description": "LeetCode 문제: Two Sum",
+      "difficulty": "EASY",
+      "platform": "LEETCODE",
+      "platform_problem_id": "1",
+      "platform_url": "https://leetcode.com/problems/two-sum/",
+      "time_limit": 1.0,
+      "memory_limit": 64,
+      "problem_statement": "",
+      "input_format": "",
+      "output_format": "",
+      "constraints": "",
+      "examples": [],
+      "test_cases": [],
+      "metadata": {
+        "created_at": "2025-08-03T20:09:10.735024",
+        "updated_at": "2025-08-03T20:09:10.735042",
+        "solved_count": 0,
+        "submission_count": 0,
+        "success_rate": 0.0,
+        "average_solve_time": null,
+        "tags": []
+      },
+      "tags": [
+        "HASH_TABLE",
+        "ARRAY"
+      ],
+      "notes": "Acceptance Rate: 56.0%",
+      "is_active": true
+    },
+    {
+      "id": "07837f06-eaf5-4f77-b304-2ee76ab4c8b0",
+      "title": "Add Two Numbers",
+      "description": "LeetCode 문제: Add Two Numbers",
+      "difficulty": "MEDIUM",
+      "platform": "LEETCODE",
+      "platform_problem_id": "2",
+      "platform_url": "https://leetcode.com/problems/add-two-numbers/",
+      "time_limit": 1.0,
+      "memory_limit": 64,
+      "problem_statement": "",
+      "input_format": "",
+      "output_format": "",
+      "constraints": "",
+      "examples": [],
+      "test_cases": [],
+      "metadata": {
+        "created_at": "2025-08-03T20:09:10.735090",
+        "updated_at": "2025-08-03T20:09:10.735091",
+        "solved_count": 0,
+        "submission_count": 0,
+        "success_rate": 0.0,
+        "average_solve_time": null,
+        "tags": []
+      },
+      "tags": [
+        "LINKED_LIST",
+        "MATH"
+      ],
+      "notes": "Acceptance Rate: 46.6%",
+      "is_active": true
+    },
+    {
+      "id": "dde864f8-a020-4ee2-8dd6-e624bb835fc7",
+      "title": "Longest Substring Without Repeating Characters",
+      "description": "LeetCode 문제: Longest Substring Without Repeating Characters",
+      "difficulty": "MEDIUM",
+      "platform": "LEETCODE",
+      "platform_problem_id": "3",
+      "platform_url": "https://leetcode.com/problems/longest-substring-without-repeating-characters/",
+      "time_limit": 1.0,
+      "memory_limit": 64,
+      "problem_statement": "",
+      "input_format": "",
+      "output_format": "",
+      "constraints": "",
+      "examples": [],
+      "test_cases": [],
+      "metadata": {
+        "created_at": "2025-08-03T20:09:10.735119",
+        "updated_at": "2025-08-03T20:09:10.735120",
+        "solved_count": 0,
+        "submission_count": 0,
+        "success_rate": 0.0,
+        "average_solve_time": null,
+        "tags": []
+      },
+      "tags": [
+        "STRING",
+        "SLIDING_WINDOW",
+        "HASH_TABLE"
+      ],
+      "notes": "Acceptance Rate: 37.3%",
+      "is_active": true
+    }
+  ]
+}

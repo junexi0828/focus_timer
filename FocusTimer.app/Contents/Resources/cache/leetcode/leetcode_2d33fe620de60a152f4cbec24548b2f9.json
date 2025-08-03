@@ -1,0 +1,322 @@
+{
+  "problems": [
+    {
+      "id": "60ad3229-b12e-4aec-b1f4-10cd92788865",
+      "title": "Two Sum",
+      "description": "LeetCode 문제: Two Sum",
+      "difficulty": "EASY",
+      "platform": "LEETCODE",
+      "platform_problem_id": "1",
+      "platform_url": "https://leetcode.com/problems/two-sum/",
+      "time_limit": 1.0,
+      "memory_limit": 64,
+      "problem_statement": "",
+      "input_format": "",
+      "output_format": "",
+      "constraints": "",
+      "examples": [],
+      "test_cases": [],
+      "metadata": {
+        "created_at": "2025-08-03T20:08:57.623544",
+        "updated_at": "2025-08-03T20:08:57.623549",
+        "solved_count": 0,
+        "submission_count": 0,
+        "success_rate": 0.0,
+        "average_solve_time": null,
+        "tags": []
+      },
+      "tags": [
+        "HASH_TABLE",
+        "ARRAY"
+      ],
+      "notes": "Acceptance Rate: 56.0%",
+      "is_active": true
+    },
+    {
+      "id": "9cc78c36-a883-4bb6-aac4-9e4eb6d75643",
+      "title": "Add Two Numbers",
+      "description": "LeetCode 문제: Add Two Numbers",
+      "difficulty": "MEDIUM",
+      "platform": "LEETCODE",
+      "platform_problem_id": "2",
+      "platform_url": "https://leetcode.com/problems/add-two-numbers/",
+      "time_limit": 1.0,
+      "memory_limit": 64,
+      "problem_statement": "",
+      "input_format": "",
+      "output_format": "",
+      "constraints": "",
+      "examples": [],
+      "test_cases": [],
+      "metadata": {
+        "created_at": "2025-08-03T20:08:57.623575",
+        "updated_at": "2025-08-03T20:08:57.623576",
+        "solved_count": 0,
+        "submission_count": 0,
+        "success_rate": 0.0,
+        "average_solve_time": null,
+        "tags": []
+      },
+      "tags": [
+        "LINKED_LIST",
+        "MATH"
+      ],
+      "notes": "Acceptance Rate: 46.6%",
+      "is_active": true
+    },
+    {
+      "id": "7f025f51-3db4-48ca-9c3d-41d6b8205912",
+      "title": "Longest Substring Without Repeating Characters",
+      "description": "LeetCode 문제: Longest Substring Without Repeating Characters",
+      "difficulty": "MEDIUM",
+      "platform": "LEETCODE",
+      "platform_problem_id": "3",
+      "platform_url": "https://leetcode.com/problems/longest-substring-without-repeating-characters/",
+      "time_limit": 1.0,
+      "memory_limit": 64,
+      "problem_statement": "",
+      "input_format": "",
+      "output_format": "",
+      "constraints": "",
+      "examples": [],
+      "test_cases": [],
+      "metadata": {
+        "created_at": "2025-08-03T20:08:57.623591",
+        "updated_at": "2025-08-03T20:08:57.623592",
+        "solved_count": 0,
+        "submission_count": 0,
+        "success_rate": 0.0,
+        "average_solve_time": null,
+        "tags": []
+      },
+      "tags": [
+        "STRING",
+        "SLIDING_WINDOW",
+        "HASH_TABLE"
+      ],
+      "notes": "Acceptance Rate: 37.3%",
+      "is_active": true
+    },
+    {
+      "id": "63c072ff-87d0-4dd0-8aa3-c8f898a48e39",
+      "title": "Median of Two Sorted Arrays",
+      "description": "LeetCode 문제: Median of Two Sorted Arrays",
+      "difficulty": "HARD",
+      "platform": "LEETCODE",
+      "platform_problem_id": "4",
+      "platform_url": "https://leetcode.com/problems/median-of-two-sorted-arrays/",
+      "time_limit": 1.0,
+      "memory_limit": 64,
+      "problem_statement": "",
+      "input_format": "",
+      "output_format": "",
+      "constraints": "",
+      "examples": [],
+      "test_cases": [],
+      "metadata": {
+        "created_at": "2025-08-03T20:08:57.623604",
+        "updated_at": "2025-08-03T20:08:57.623605",
+        "solved_count": 0,
+        "submission_count": 0,
+        "success_rate": 0.0,
+        "average_solve_time": null,
+        "tags": []
+      },
+      "tags": [
+        "BINARY_SEARCH",
+        "ARRAY"
+      ],
+      "notes": "Acceptance Rate: 44.3%",
+      "is_active": true
+    },
+    {
+      "id": "c41d3247-9320-451b-9bac-727955cb0477",
+      "title": "Longest Palindromic Substring",
+      "description": "LeetCode 문제: Longest Palindromic Substring",
+      "difficulty": "MEDIUM",
+      "platform": "LEETCODE",
+      "platform_problem_id": "5",
+      "platform_url": "https://leetcode.com/problems/longest-palindromic-substring/",
+      "time_limit": 1.0,
+      "memory_limit": 64,
+      "problem_statement": "",
+      "input_format": "",
+      "output_format": "",
+      "constraints": "",
+      "examples": [],
+      "test_cases": [],
+      "metadata": {
+        "created_at": "2025-08-03T20:08:57.623618",
+        "updated_at": "2025-08-03T20:08:57.623618",
+        "solved_count": 0,
+        "submission_count": 0,
+        "success_rate": 0.0,
+        "average_solve_time": null,
+        "tags": []
+      },
+      "tags": [
+        "STRING",
+        "TWO_POINTERS",
+        "DYNAMIC_PROGRAMMING"
+      ],
+      "notes": "Acceptance Rate: 36.1%",
+      "is_active": true
+    },
+    {
+      "id": "c3f8f83e-bf20-4556-b9a8-4f807a3e0578",
+      "title": "Zigzag Conversion",
+      "description": "LeetCode 문제: Zigzag Conversion",
+      "difficulty": "MEDIUM",
+      "platform": "LEETCODE",
+      "platform_problem_id": "6",
+      "platform_url": "https://leetcode.com/problems/zigzag-conversion/",
+      "time_limit": 1.0,
+      "memory_limit": 64,
+      "problem_statement": "",
+      "input_format": "",
+      "output_format": "",
+      "constraints": "",
+      "examples": [],
+      "test_cases": [],
+      "metadata": {
+        "created_at": "2025-08-03T20:08:57.623627",
+        "updated_at": "2025-08-03T20:08:57.623627",
+        "solved_count": 0,
+        "submission_count": 0,
+        "success_rate": 0.0,
+        "average_solve_time": null,
+        "tags": []
+      },
+      "tags": [
+        "STRING"
+      ],
+      "notes": "Acceptance Rate: 52.0%",
+      "is_active": true
+    },
+    {
+      "id": "c116c28b-3e21-427a-bf06-d7cf1d15de36",
+      "title": "Reverse Integer",
+      "description": "LeetCode 문제: Reverse Integer",
+      "difficulty": "MEDIUM",
+      "platform": "LEETCODE",
+      "platform_problem_id": "7",
+      "platform_url": "https://leetcode.com/problems/reverse-integer/",
+      "time_limit": 1.0,
+      "memory_limit": 64,
+      "problem_statement": "",
+      "input_format": "",
+      "output_format": "",
+      "constraints": "",
+      "examples": [],
+      "test_cases": [],
+      "metadata": {
+        "created_at": "2025-08-03T20:08:57.623636",
+        "updated_at": "2025-08-03T20:08:57.623636",
+        "solved_count": 0,
+        "submission_count": 0,
+        "success_rate": 0.0,
+        "average_solve_time": null,
+        "tags": []
+      },
+      "tags": [
+        "MATH"
+      ],
+      "notes": "Acceptance Rate: 30.5%",
+      "is_active": true
+    },
+    {
+      "id": "0619c00c-58ea-4cf3-9075-b118497536c6",
+      "title": "String to Integer (atoi)",
+      "description": "LeetCode 문제: String to Integer (atoi)",
+      "difficulty": "MEDIUM",
+      "platform": "LEETCODE",
+      "platform_problem_id": "8",
+      "platform_url": "https://leetcode.com/problems/string-to-integer-atoi/",
+      "time_limit": 1.0,
+      "memory_limit": 64,
+      "problem_statement": "",
+      "input_format": "",
+      "output_format": "",
+      "constraints": "",
+      "examples": [],
+      "test_cases": [],
+      "metadata": {
+        "created_at": "2025-08-03T20:08:57.623645",
+        "updated_at": "2025-08-03T20:08:57.623646",
+        "solved_count": 0,
+        "submission_count": 0,
+        "success_rate": 0.0,
+        "average_solve_time": null,
+        "tags": []
+      },
+      "tags": [
+        "STRING"
+      ],
+      "notes": "Acceptance Rate: 19.5%",
+      "is_active": true
+    },
+    {
+      "id": "9ad9d255-8e40-4f09-a60b-768ae44684dd",
+      "title": "Palindrome Number",
+      "description": "LeetCode 문제: Palindrome Number",
+      "difficulty": "EASY",
+      "platform": "LEETCODE",
+      "platform_problem_id": "9",
+      "platform_url": "https://leetcode.com/problems/palindrome-number/",
+      "time_limit": 1.0,
+      "memory_limit": 64,
+      "problem_statement": "",
+      "input_format": "",
+      "output_format": "",
+      "constraints": "",
+      "examples": [],
+      "test_cases": [],
+      "metadata": {
+        "created_at": "2025-08-03T20:08:57.623654",
+        "updated_at": "2025-08-03T20:08:57.623655",
+        "solved_count": 0,
+        "submission_count": 0,
+        "success_rate": 0.0,
+        "average_solve_time": null,
+        "tags": []
+      },
+      "tags": [
+        "MATH"
+      ],
+      "notes": "Acceptance Rate: 59.4%",
+      "is_active": true
+    },
+    {
+      "id": "04d8ad50-0539-4e2a-9476-e7597d4a7d62",
+      "title": "Regular Expression Matching",
+      "description": "LeetCode 문제: Regular Expression Matching",
+      "difficulty": "HARD",
+      "platform": "LEETCODE",
+      "platform_problem_id": "10",
+      "platform_url": "https://leetcode.com/problems/regular-expression-matching/",
+      "time_limit": 1.0,
+      "memory_limit": 64,
+      "problem_statement": "",
+      "input_format": "",
+      "output_format": "",
+      "constraints": "",
+      "examples": [],
+      "test_cases": [],
+      "metadata": {
+        "created_at": "2025-08-03T20:08:57.623666",
+        "updated_at": "2025-08-03T20:08:57.623667",
+        "solved_count": 0,
+        "submission_count": 0,
+        "success_rate": 0.0,
+        "average_solve_time": null,
+        "tags": []
+      },
+      "tags": [
+        "STRING",
+        "DYNAMIC_PROGRAMMING"
+      ],
+      "notes": "Acceptance Rate: 29.5%",
+      "is_active": true
+    }
+  ]
+}

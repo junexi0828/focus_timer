@@ -1,0 +1,21 @@
+[
+  {
+    "challenge_id": "c837f444-4dad-44c5-97bd-e22121a44950",
+    "name": "일일 알고리즘 챌린지",
+    "description": "오늘의 EASY 난이도 문제들을 해결해보세요!",
+    "challenge_type": "DAILY",
+    "target_difficulty": "EASY",
+    "target_problems": 2,
+    "time_limit_days": 1,
+    "start_date": "2025-08-03T21:56:27.584723",
+    "end_date": "2025-08-04T21:56:27.584762",
+    "problems": [
+      "easy_001",
+      "easy_002"
+    ],
+    "completed_problems": [],
+    "status": "ACTIVE",
+    "reward_points": 100,
+    "bonus_conditions": {}
+  }
+]
