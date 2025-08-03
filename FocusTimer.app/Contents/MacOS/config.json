@@ -1,0 +1,21 @@
+{
+  "general": {
+    "auto_start": true
+  },
+  "security": {
+    "enable_auto_recovery": true,
+    "lock_hosts_file": true,
+    "enable_dns_cache_flush": true,
+    "enable_browser_cache_clear": true,
+    "enable_firewall_rules": true,
+    "enable_file_monitoring": true
+  },
+  "browser": {
+    "auto_monitoring": true,
+    "auto_cache_clear": true,
+    "auto_session_save": true
+  },
+  "focus_mode": {
+    "auto_restart_browser": true
+  }
+}

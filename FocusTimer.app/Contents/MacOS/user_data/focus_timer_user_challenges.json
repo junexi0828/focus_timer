@@ -1,0 +1,62 @@
+[
+  {
+    "challenge_id": "6feee515-4cfc-4282-881d-313b39309943",
+    "name": "일일 알고리즘 챌린지",
+    "description": "오늘의 EASY 난이도 문제들을 해결해보세요!",
+    "challenge_type": "DAILY",
+    "target_difficulty": "EASY",
+    "target_problems": 2,
+    "time_limit_days": 1,
+    "start_date": "2025-08-04T03:22:38.880336",
+    "end_date": "2025-08-05T03:22:38.880344",
+    "problems": [
+      "easy_001",
+      "easy_002"
+    ],
+    "completed_problems": [],
+    "status": "ACTIVE",
+    "reward_points": 100,
+    "bonus_conditions": {}
+  },
+  {
+    "challenge_id": "ab38f781-d07f-41c6-84b2-165045523d31",
+    "name": "주간 알고리즘 챌린지",
+    "description": "이번 주 다양한 난이도의 문제들을 도전해보세요!",
+    "challenge_type": "WEEKLY",
+    "target_difficulty": "MEDIUM",
+    "target_problems": 5,
+    "time_limit_days": 7,
+    "start_date": "2025-08-04T03:22:44.395063",
+    "end_date": "2025-08-11T03:22:44.395080",
+    "problems": [
+      "easy_002",
+      "easy_001",
+      "medium_002",
+      "medium_001",
+      "hard_001"
+    ],
+    "completed_problems": [],
+    "status": "ACTIVE",
+    "reward_points": 500,
+    "bonus_conditions": {}
+  },
+  {
+    "challenge_id": "480b1e44-b18b-498b-a3d6-df3e053b5c7f",
+    "name": "일일 알고리즘 챌린지",
+    "description": "오늘의 EASY 난이도 문제들을 해결해보세요!",
+    "challenge_type": "DAILY",
+    "target_difficulty": "EASY",
+    "target_problems": 2,
+    "time_limit_days": 1,
+    "start_date": "2025-08-04T03:55:14.408773",
+    "end_date": "2025-08-05T03:55:14.408824",
+    "problems": [
+      "easy_002",
+      "easy_001"
+    ],
+    "completed_problems": [],
+    "status": "ACTIVE",
+    "reward_points": 100,
+    "bonus_conditions": {}
+  }
+]
