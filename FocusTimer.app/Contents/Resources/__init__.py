@@ -1,41 +1,47 @@
 """
-알고리즘 시스템 패키지
-
-대기업 코딩테스트 수준의 알고리즘 문제 시스템을 위한 표준화된 데이터 구조와 관리 시스템
+FocusTimer.app Resources Package
+알고리즘 시스템 및 기타 리소스 모듈들을 포함하는 패키지
 """
 
-from .problem_data_structures import (
-    AlgorithmProblem,
-    ProblemDifficulty,
-    ProblemPlatform,
-    ProblemTag,
-    ProblemTestCase,
-    ProblemMetadata,
-    ProblemCollection
-)
-
-from .remote_problem_provider import (
-    RemoteProblemProvider,
-    CodeforcesProvider,
-    LeetCodeProvider,
-    KaggleProvider,
-    RemoteProblemManager
-)
-
 __version__ = "1.0.0"
-__author__ = "Focus Timer Team"
+__author__ = "FocusTimer Team"
 
+# 패키지 초기화 시 필요한 설정
+import os
+import sys
+from pathlib import Path
+
+# 패키지 루트 경로 설정
+PACKAGE_ROOT = Path(__file__).parent
+ALGORITHM_MODULES_PATH = PACKAGE_ROOT
+
+# 알고리즘 모듈들을 패키지 네임스페이스에 추가
 __all__ = [
-    "AlgorithmProblem",
-    "ProblemDifficulty",
-    "ProblemPlatform",
-    "ProblemTag",
-    "ProblemTestCase",
-    "ProblemMetadata",
-    "ProblemCollection",
-    "RemoteProblemProvider",
-    "CodeforcesProvider",
-    "LeetCodeProvider",
-    "KaggleProvider",
-    "RemoteProblemManager"
+    'algorithm_tab',
+    'gui_algorithm_manager',
+    'advanced_challenge_system',
+    'user_progress_tracker',
+    'problem_data_structures',
+    'remote_problem_provider'
 ]
+
+# 모듈 로드 상태 확인 함수
+def check_algorithm_modules():
+    """알고리즘 모듈들의 로드 상태를 확인"""
+    modules_status = {}
+
+    for module_name in __all__:
+        try:
+            module = __import__(f"resources.{module_name}", fromlist=[module_name])
+            modules_status[module_name] = True
+        except ImportError:
+            modules_status[module_name] = False
+
+    return modules_status
+
+# 패키지 초기화 시 모듈 상태 출력
+if __name__ != "__main__":
+    print("📦 FocusTimer Resources 패키지 초기화 중...")
+    status = check_algorithm_modules()
+    loaded_count = sum(status.values())
+    print(f"✅ {loaded_count}/{len(__all__)} 모듈 로드 완료")
