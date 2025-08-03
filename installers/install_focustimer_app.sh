@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# FocusTimer Hybrid 구조 설치 스크립트
+# FocusTimer App 구조 설치 스크립트
 # 최적화된 .app 패키징 및 배포
 
 set -e
@@ -351,7 +351,7 @@ create_default_config() {
   "app_info": {
     "name": "FocusTimer",
     "version": "2.0.0",
-    "description": "Hybrid 구조 집중 모드 시스템"
+    "description": "App 구조 집중 모드 시스템"
   },
   "system_paths": {
     "hosts_file": "/etc/hosts",
@@ -630,7 +630,7 @@ set_permissions() {
 show_completion_message() {
     log_step "설치 완료!"
     echo
-    echo -e "${GREEN}🎉 FocusTimer Hybrid 구조 설치가 완료되었습니다!${NC}"
+    echo -e "${GREEN}🎉 FocusTimer App 구조 설치가 완료되었습니다!${NC}"
     echo -e "${BLUE}📦 버전: $CURRENT_VERSION${NC}"
     echo
     echo -e "${BLUE}📱 사용 방법:${NC}"
@@ -674,7 +674,7 @@ show_completion_message() {
 
 # 메인 설치 함수
 main() {
-    echo -e "${BLUE}🚀 FocusTimer Hybrid 구조 설치 시작${NC}"
+    echo -e "${BLUE}🚀 FocusTimer App 구조 설치 시작${NC}"
     echo
 
     check_admin
