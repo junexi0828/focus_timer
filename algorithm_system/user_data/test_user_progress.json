@@ -1,0 +1,66 @@
+{
+  "user_id": "test_user",
+  "last_updated": "2025-08-03T20:48:57.581175",
+  "achievement": {
+    "total_problems_solved": 1,
+    "total_submissions": 4,
+    "correct_submissions": 1,
+    "average_attempts_per_problem": 2,
+    "average_solve_time": 0.0,
+    "current_streak": 0,
+    "longest_streak": 0,
+    "last_solved_date": "2025-08-03T20:48:57.462255",
+    "easy_solved": 0,
+    "medium_solved": 0,
+    "hard_solved": 0,
+    "expert_solved": 0,
+    "tag_achievements": {}
+  },
+  "submissions": [
+    {
+      "problem_id": "easy_002",
+      "submission_time": "2025-08-03T20:48:57.397028",
+      "status": "WRONG_ANSWER",
+      "execution_time": 0.0,
+      "memory_used": 0,
+      "code_language": "python",
+      "code_length": 127,
+      "attempt_count": 1,
+      "notes": "성공률: 0.00%"
+    },
+    {
+      "problem_id": "easy_001",
+      "submission_time": "2025-08-03T20:48:57.462255",
+      "status": "CORRECT",
+      "execution_time": 0.0,
+      "memory_used": 0,
+      "code_language": "python",
+      "code_length": 108,
+      "attempt_count": 1,
+      "notes": "성공률: 1.00%"
+    },
+    {
+      "problem_id": "easy_001",
+      "submission_time": "2025-08-03T20:48:57.521566",
+      "status": "WRONG_ANSWER",
+      "execution_time": 0.0,
+      "memory_used": 0,
+      "code_language": "python",
+      "code_length": 122,
+      "attempt_count": 1,
+      "notes": "성공률: 0.00%"
+    },
+    {
+      "problem_id": "easy_001",
+      "submission_time": "2025-08-03T20:48:57.581119",
+      "status": "WRONG_ANSWER",
+      "execution_time": 0.0,
+      "memory_used": 0,
+      "code_language": "python",
+      "code_length": 121,
+      "attempt_count": 1,
+      "notes": "성공률: 0.00%"
+    }
+  ],
+  "learning_paths": []
+}

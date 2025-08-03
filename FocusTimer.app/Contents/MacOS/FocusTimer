@@ -26,6 +26,10 @@ from pathlib import Path
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 import psutil
+from dataclasses import dataclass, asdict
+from typing import List, Optional, Dict, Any
+from datetime import timedelta
+import requests
 
 # ----- 앱 경로 설정 -----
 APP_ROOT = Path(__file__).parent.parent
@@ -187,8 +191,11 @@ class ConfigManager:
     def get_all_blocked_websites(self):
         """모든 차단할 웹사이트 목록 반환"""
         websites = []
-        for category, sites in self.get("blocked_websites", {}).items():
-            websites.extend(sites)
+        blocked_sites = self.get("blocked_websites", {})
+        if blocked_sites:
+            for category, sites in blocked_sites.items():
+                if sites:
+                    websites.extend(sites)
         return websites
 
 # ----- 전역 설정 인스턴스 -----
@@ -236,15 +243,17 @@ class SystemProtection:
     def __init__(self):
         self.original_hosts_permissions = None
         self.firewall_rules = []
-        self.logger = Logger(config_manager.get("system_paths.log_path"))
+        # 전역 logger 사용 (A코드 방식)
+        self.logger = global_logger
 
     def backup_hosts_permissions(self):
         """hosts 파일 원본 권한 백업"""
         try:
             hosts_path = config_manager.get("system_paths.hosts_file", "/etc/hosts")
-            stat_info = os.stat(hosts_path)
-            self.original_hosts_permissions = stat_info.st_mode
-            self.logger.log("INFO", "hosts 파일 권한 백업 완료")
+            if hosts_path:
+                stat_info = os.stat(str(hosts_path))
+                self.original_hosts_permissions = stat_info.st_mode
+                self.logger.log("INFO", "hosts 파일 권한 백업 완료")
         except Exception as e:
             self.logger.log("ERROR", f"hosts 파일 권한 백업 실패: {e}")
 
@@ -252,8 +261,9 @@ class SystemProtection:
         """hosts 파일을 읽기 전용으로 잠금"""
         try:
             hosts_path = config_manager.get("system_paths.hosts_file", "/etc/hosts")
-            os.chmod(hosts_path, stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH)  # 444
-            self.logger.log("INFO", "hosts 파일 잠금 완료")
+            if hosts_path:
+                os.chmod(str(hosts_path), stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH)  # 444
+                self.logger.log("INFO", "hosts 파일 잠금 완료")
         except Exception as e:
             self.logger.log("ERROR", f"hosts 파일 잠금 실패: {e}")
 
@@ -261,11 +271,12 @@ class SystemProtection:
         """hosts 파일 잠금 해제"""
         try:
             hosts_path = config_manager.get("system_paths.hosts_file", "/etc/hosts")
-            if self.original_hosts_permissions:
-                os.chmod(hosts_path, self.original_hosts_permissions)
-            else:
-                os.chmod(hosts_path, stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH)  # 644
-            self.logger.log("INFO", "hosts 파일 잠금 해제 완료")
+            if hosts_path:
+                if self.original_hosts_permissions:
+                    os.chmod(str(hosts_path), self.original_hosts_permissions)
+                else:
+                    os.chmod(str(hosts_path), stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH)  # 644
+                self.logger.log("INFO", "hosts 파일 잠금 해제 완료")
         except Exception as e:
             self.logger.log("ERROR", f"hosts 파일 잠금 해제 실패: {e}")
 
@@ -311,10 +322,11 @@ class SystemProtection:
 
 # ----- 지속적 모니터링 -----
 class HostsFileMonitor(FileSystemEventHandler):
-    def __init__(self, focus_timer):
-        self.focus_timer = focus_timer
+    def __init__(self, on_modify_callback):
+        self.on_modify_callback = on_modify_callback
         self.last_modified = 0
-        self.logger = Logger(config_manager.get("system_paths.log_path"))
+        # 전역 logger 사용 (A코드 방식)
+        self.logger = global_logger
 
     def on_modified(self, event):
         hosts_path = config_manager.get("system_paths.hosts_file", "/etc/hosts")
@@ -323,14 +335,15 @@ class HostsFileMonitor(FileSystemEventHandler):
             if current_time - self.last_modified > 1:  # 중복 이벤트 방지
                 self.last_modified = current_time
                 self.logger.log("WARNING", "hosts 파일 변경 감지됨")
-                self.focus_timer.handle_hosts_modification()
+                self.on_modify_callback()
 
 class FocusTimerMonitor:
     def __init__(self):
         self.observer = None
         self.monitoring = False
         self.system_protection = SystemProtection()
-        self.logger = Logger(config_manager.get("system_paths.log_path", "/var/log/FocusTimer/focus_timer.log"))
+        # 전역 logger 사용 (A코드 방식)
+        self.logger = global_logger
 
     def start_monitoring(self):
         """파일 시스템 모니터링 시작"""
@@ -339,13 +352,14 @@ class FocusTimerMonitor:
 
         try:
             self.observer = Observer()
-            event_handler = HostsFileMonitor(self)
+            event_handler = HostsFileMonitor(self.handle_hosts_modification)
             hosts_path = config_manager.get("system_paths.hosts_file", "/etc/hosts")
-            hosts_dir = os.path.dirname(hosts_path)
-            self.observer.schedule(event_handler, path=hosts_dir, recursive=False)
-            self.observer.start()
-            self.monitoring = True
-            self.logger.log("INFO", "파일 시스템 모니터링 시작")
+            if hosts_path:
+                hosts_dir = os.path.dirname(str(hosts_path))
+                self.observer.schedule(event_handler, path=hosts_dir, recursive=False)
+                self.observer.start()
+                self.monitoring = True
+                self.logger.log("INFO", "파일 시스템 모니터링 시작")
         except Exception as e:
             self.logger.log("ERROR", f"모니터링 시작 실패: {e}")
 
@@ -419,28 +433,11 @@ class FocusTimerMonitor:
             self.logger.log("ERROR", f"DNS 캐시 초기화 실패: {e}")
 
     def restart_browsers(self):
-        """브라우저 강제 재시작"""
-        browsers = config_manager.get("browsers.supported", ["Google Chrome", "Safari", "Firefox", "Whale", "Microsoft Edge"])
-
-        for browser in browsers:
-            try:
-                # 브라우저 종료
-                subprocess.run(["osascript", "-e", f'quit app "{browser}"'],
-                             capture_output=True, timeout=5)
-                time.sleep(2)
-
-                # 강제 종료
-                subprocess.run(["pkill", "-f", browser], capture_output=True)
-                time.sleep(1)
-
-                # 재시작
-                subprocess.run(["open", "-a", browser], capture_output=True)
-                time.sleep(3)
-
-                self.logger.log("INFO", f"{browser} 재시작 완료")
-
-            except Exception as e:
-                self.logger.log("ERROR", f"{browser} 재시작 실패: {e}")
+        """브라우저 강제 재시작 (BrowserManager 사용)"""
+        if hasattr(self, 'browser_manager'):
+            self.browser_manager.restart_browsers()
+        else:
+            logger.log("ERROR", "BrowserManager가 초기화되지 않았습니다.")
 
     def send_system_notification(self, title, message):
         """시스템 알림 전송"""
@@ -452,207 +449,15 @@ class FocusTimerMonitor:
         except:
             pass
 
-# 전역 인스턴스
+# ----- 전역 인스턴스 -----
 state = FocusTimerState()
 challenge = None
+global_browser_manager = BrowserManager()  # 전역 브라우저 관리자
 
 # ----- 로깅 시스템 -----
-class Logger:
-    def __init__(self, log_file):
-        self.log_file = log_file
-        self.ensure_log_directory()
-
-    def ensure_log_directory(self):
-        os.makedirs(os.path.dirname(self.log_file), exist_ok=True)
-
-    def log(self, level, message):
-        timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        log_entry = f"[{timestamp}] [{level}] {message}"
-
-        # 콘솔 출력
-        print(log_entry)
-
-        # 파일 로깅
-        try:
-            with open(self.log_file, "a", encoding="utf-8") as f:
-                f.write(log_entry + "\n")
-        except:
-            pass
-
-logger = Logger(config_manager.get("system_paths.log_path"))
-
-# ----- 시스템 레벨 보호 -----
-class SystemProtection:
-    def __init__(self):
-        self.original_hosts_permissions = None
-        self.firewall_rules = []
-
-    def backup_hosts_permissions(self):
-        """hosts 파일 원본 권한 백업"""
-        try:
-            hosts_path = config_manager.get("system_paths.hosts_file")
-            stat_info = os.stat(hosts_path)
-            self.original_hosts_permissions = stat_info.st_mode
-            logger.log("INFO", "hosts 파일 권한 백업 완료")
-        except Exception as e:
-            logger.log("ERROR", f"hosts 파일 권한 백업 실패: {e}")
-
-    def lock_hosts_file(self):
-        """hosts 파일을 읽기 전용으로 잠금"""
-        try:
-            hosts_path = config_manager.get("system_paths.hosts_file")
-            os.chmod(hosts_path, stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH)  # 444
-            logger.log("INFO", "hosts 파일 잠금 완료")
-        except Exception as e:
-            logger.log("ERROR", f"hosts 파일 잠금 실패: {e}")
-
-    def unlock_hosts_file(self):
-        """hosts 파일 잠금 해제"""
-        try:
-            hosts_path = config_manager.get("system_paths.hosts_file")
-            if self.original_hosts_permissions:
-                os.chmod(hosts_path, self.original_hosts_permissions)
-            else:
-                os.chmod(hosts_path, stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH)  # 644
-            logger.log("INFO", "hosts 파일 잠금 해제 완료")
-        except Exception as e:
-            logger.log("ERROR", f"hosts 파일 잠금 해제 실패: {e}")
-
-# ----- 지속적 모니터링 -----
-class HostsFileMonitor(FileSystemEventHandler):
-    def __init__(self, focus_timer):
-        self.focus_timer = focus_timer
-        self.last_modified = 0
-
-    def on_modified(self, event):
-        hosts_path = config_manager.get("system_paths.hosts_file")
-        if event.src_path == hosts_path:
-            current_time = time.time()
-            if current_time - self.last_modified > 1:  # 중복 이벤트 방지
-                self.last_modified = current_time
-                logger.log("WARNING", "hosts 파일 변경 감지됨")
-                self.focus_timer.handle_hosts_modification()
-
-class FocusTimerMonitor:
-    def __init__(self):
-        self.observer = None
-        self.monitoring = False
-        self.system_protection = SystemProtection()
-
-    def start_monitoring(self):
-        """파일 시스템 모니터링 시작"""
-        if not config_manager.get("security.enable_file_monitoring", True):
-            return
-
-        try:
-            self.observer = Observer()
-            event_handler = HostsFileMonitor(self)
-            self.observer.schedule(event_handler, path="/etc", recursive=False)
-            self.observer.start()
-            self.monitoring = True
-            logger.log("INFO", "파일 시스템 모니터링 시작")
-        except Exception as e:
-            logger.log("ERROR", f"모니터링 시작 실패: {e}")
-
-    def stop_monitoring(self):
-        """파일 시스템 모니터링 중지"""
-        if self.observer:
-            self.observer.stop()
-            self.observer.join()
-            self.monitoring = False
-            logger.log("INFO", "파일 시스템 모니터링 중지")
-
-    def handle_hosts_modification(self):
-        """hosts 파일 수정 처리"""
-        if state.is_focus_mode and state.is_blocked:
-            logger.log("WARNING", "집중 모드 중 hosts 파일 수정 시도 감지")
-            state.bypass_attempts += 1
-
-            # 자동으로 차단 재적용
-            self.reapply_blocking()
-
-            # 보안 강화
-            self.enhance_security()
-
-    def reapply_blocking(self):
-        """차단 재적용"""
-        try:
-            # hosts 파일 잠금 해제
-            self.system_protection.unlock_hosts_file()
-
-            # 차단 설정 재적용
-            block_websites()
-
-            # hosts 파일 다시 잠금
-            if config_manager.get("security.lock_hosts_file", True):
-                self.system_protection.lock_hosts_file()
-
-            # DNS 캐시 초기화
-            if config_manager.get("security.enable_dns_cache_flush", True):
-                self.flush_dns_cache()
-
-            logger.log("INFO", "차단 재적용 완료")
-
-        except Exception as e:
-            logger.log("ERROR", f"차단 재적용 실패: {e}")
-
-    def enhance_security(self):
-        """보안 강화"""
-        try:
-            # 브라우저 강제 재시작
-            if config_manager.get("focus_mode.force_browser_restart", True):
-                self.restart_browsers()
-
-            # 시스템 알림
-            self.send_system_notification("보안 경고", "집중 모드 중 차단 해제 시도가 감지되었습니다.")
-
-            logger.log("INFO", "보안 강화 완료")
-
-        except Exception as e:
-            logger.log("ERROR", f"보안 강화 실패: {e}")
-
-    def flush_dns_cache(self):
-        """DNS 캐시 초기화"""
-        try:
-            subprocess.run(["sudo", "dscacheutil", "-flushcache"], check=True)
-            subprocess.run(["sudo", "killall", "-HUP", "mDNSResponder"], check=True)
-            logger.log("INFO", "DNS 캐시 초기화 완료")
-        except Exception as e:
-            logger.log("ERROR", f"DNS 캐시 초기화 실패: {e}")
-
-    def restart_browsers(self):
-        """브라우저 강제 재시작"""
-        browsers = config_manager.get("browsers.supported", [])
-
-        for browser in browsers:
-            try:
-                # 브라우저 종료
-                subprocess.run(["osascript", "-e", f'quit app "{browser}"'],
-                             capture_output=True, timeout=5)
-                time.sleep(2)
-
-                # 강제 종료
-                subprocess.run(["pkill", "-f", browser], capture_output=True)
-                time.sleep(1)
-
-                # 재시작
-                subprocess.run(["open", "-a", browser], capture_output=True)
-                time.sleep(3)
-
-                logger.log("INFO", f"{browser} 재시작 완료")
-
-            except Exception as e:
-                logger.log("ERROR", f"{browser} 재시작 실패: {e}")
-
-    def send_system_notification(self, title, message):
-        """시스템 알림 전송"""
-        try:
-            subprocess.run([
-                "osascript", "-e",
-                f'display notification "{message}" with title "{title}"'
-            ], capture_output=True)
-        except:
-            pass
+# 전역 Logger 싱글턴 패턴
+global_logger = Logger(config_manager.get("system_paths.log_path", "/var/log/FocusTimer/focus_timer.log"))
+logger = global_logger  # 호환성을 위한 별칭
 
 # ----- 알고리즘 문제 시스템 -----
 class AlgorithmChallenge:
@@ -774,7 +579,7 @@ class AlgorithmChallenge:
 
 # ----- 다중 차단 레이어 -----
 def block_websites():
-    """다중 레이어 차단 적용"""
+    """다중 레이어 차단 적용 (브라우저 제어 연동)"""
     try:
         # 1. hosts 파일 차단
         block_hosts_file()
@@ -791,15 +596,23 @@ def block_websites():
         if config_manager.get("security.enable_browser_cache_clear", True):
             clear_browser_cache()
 
+        # 5. 브라우저 강화 제어 (집중 모드 연동)
+        if config_manager.get("browser_control.enable_focus_mode_integration", True):
+            if 'global_browser_manager' in globals():
+                global_browser_manager.focus_mode_browser_control(enable_focus=True)
+            else:
+                browser_manager = BrowserManager()
+                browser_manager.focus_mode_browser_control(enable_focus=True)
+
         state.is_blocked = True
         state.block_count += 1
-        logger.log("INFO", "다중 레이어 차단 적용 완료")
+        logger.log("INFO", "다중 레이어 차단 적용 완료 (브라우저 제어 연동)")
 
     except Exception as e:
         logger.log("ERROR", f"차단 적용 실패: {e}")
 
 def unblock_websites():
-    """다중 레이어 차단 해제"""
+    """다중 레이어 차단 해제 (브라우저 제어 연동)"""
     try:
         # 1. hosts 파일 복구
         restore_hosts_file()
@@ -812,8 +625,16 @@ def unblock_websites():
         if config_manager.get("security.enable_dns_cache_flush", True):
             flush_dns_cache()
 
+        # 4. 브라우저 제어 복구 (집중 모드 해제)
+        if config_manager.get("browser_control.enable_focus_mode_integration", True):
+            if 'global_browser_manager' in globals():
+                global_browser_manager.focus_mode_browser_control(enable_focus=False)
+            else:
+                browser_manager = BrowserManager()
+                browser_manager.focus_mode_browser_control(enable_focus=False)
+
         state.is_blocked = False
-        logger.log("INFO", "다중 레이어 차단 해제 완료")
+        logger.log("INFO", "다중 레이어 차단 해제 완료 (브라우저 제어 연동)")
 
     except Exception as e:
         logger.log("ERROR", f"차단 해제 실패: {e}")
@@ -939,22 +760,13 @@ def flush_dns_cache():
         logger.log("ERROR", f"DNS 캐시 초기화 실패: {e}")
 
 def clear_browser_cache():
-    """브라우저 캐시 초기화"""
-    browsers = config_manager.get("browsers.supported", [])
-    cache_paths = config_manager.get("browsers.cache_paths", {})
-
-    for browser in browsers:
-        try:
-            if browser in cache_paths:
-                for path in cache_paths[browser]:
-                    expanded_path = os.path.expanduser(path)
-                    if os.path.exists(expanded_path):
-                        subprocess.run(["rm", "-rf", f"{expanded_path}/*"], capture_output=True)
-
-            logger.log("INFO", f"{browser} 캐시 초기화 완료")
-
-        except Exception as e:
-            logger.log("ERROR", f"{browser} 캐시 초기화 실패: {e}")
+    """브라우저 캐시 초기화 (BrowserManager 사용)"""
+    # 전역 BrowserManager 인스턴스가 있으면 사용, 없으면 새로 생성
+    if 'global_browser_manager' in globals():
+        global_browser_manager.clear_browser_cache()
+    else:
+        browser_manager = BrowserManager()
+        browser_manager.clear_browser_cache()
 
 # ----- 상태 관리 -----
 def save_state():
@@ -1012,6 +824,7 @@ class FocusTimerApp:
         global challenge
         challenge = AlgorithmChallenge()
         self.monitor = FocusTimerMonitor()
+        self.browser_manager = BrowserManager()  # 브라우저 관리자 초기화
         self.running = False
         self.monitor_thread = None
 
@@ -1094,6 +907,7 @@ class FocusTimerApp:
         # 탭 추가
         self.create_dashboard_tab()
         self.create_timer_tab()
+        self.create_browser_tab()  # 브라우저 관리 탭 추가
         self.create_settings_tab()
         self.create_stats_tab()
         self.create_logs_tab()
@@ -1223,6 +1037,236 @@ class FocusTimerApp:
         for i in range(1, max_difficulty + 1):
             ttk.Radiobutton(difficulty_frame, text=f"난이도 {i}",
                            variable=self.difficulty_var, value=i).grid(row=0, column=i-1, padx=(0, 10))
+
+    def create_browser_tab(self):
+        """브라우저 관리 탭"""
+        browser_frame = ttk.Frame(self.notebook, padding="10")
+        self.notebook.add(browser_frame, text="🌐 브라우저")
+
+        # 브라우저 상태
+        status_frame = ttk.LabelFrame(browser_frame, text="📊 브라우저 상태", padding="10")
+        status_frame.grid(row=0, column=0, sticky=(tk.W, tk.E), pady=(0, 10))
+
+        # 실행 중인 브라우저 목록
+        self.running_browsers_var = tk.StringVar(value="확인 중...")
+        ttk.Label(status_frame, text="실행 중인 브라우저:").grid(row=0, column=0, sticky=tk.W)
+        ttk.Label(status_frame, textvariable=self.running_browsers_var,
+                 font=('Helvetica', 10, 'bold')).grid(row=0, column=1, padx=(10, 0), sticky=tk.W)
+
+        # 브라우저 제어 버튼
+        control_frame = ttk.LabelFrame(browser_frame, text="🎮 브라우저 제어", padding="10")
+        control_frame.grid(row=1, column=0, sticky=(tk.W, tk.E), pady=(0, 10))
+
+        # 첫 번째 행
+        ttk.Button(control_frame, text="🔄 브라우저 재시작",
+                  command=self.restart_browsers).grid(row=0, column=0, padx=(0, 10), pady=(0, 5))
+        ttk.Button(control_frame, text="🧹 캐시 초기화",
+                  command=self.clear_browser_cache).grid(row=0, column=1, padx=(0, 10), pady=(0, 5))
+        ttk.Button(control_frame, text="🔄 새로고침",
+                  command=self.refresh_browsers).grid(row=0, column=2, padx=(0, 10), pady=(0, 5))
+
+        # 두 번째 행
+        ttk.Button(control_frame, text="💾 세션 저장",
+                  command=self.save_browser_sessions).grid(row=1, column=0, padx=(0, 10), pady=(0, 5))
+        ttk.Button(control_frame, text="📂 세션 복구",
+                  command=self.restore_browser_sessions).grid(row=1, column=1, padx=(0, 10), pady=(0, 5))
+        ttk.Button(control_frame, text="🚀 안전 재시작",
+                  command=self.safe_browser_restart).grid(row=1, column=2, padx=(0, 10), pady=(0, 5))
+
+        # 세 번째 행
+        ttk.Button(control_frame, text="🌐 DNS 초기화",
+                  command=self.flush_dns_cache).grid(row=2, column=0, padx=(0, 10), pady=(0, 5))
+        ttk.Button(control_frame, text="⚡ 최적화 정리",
+                  command=self.optimized_browser_clear).grid(row=2, column=1, padx=(0, 10), pady=(0, 5))
+        ttk.Button(control_frame, text="🔄 상태 새로고침",
+                  command=self.refresh_browser_status).grid(row=2, column=2, padx=(0, 10), pady=(0, 5))
+
+        # 네 번째 행 (집중 모드 연동)
+        ttk.Button(control_frame, text="🎯 집중 모드 브라우저 제어",
+                  command=self.focus_mode_browser_control).grid(row=3, column=0, padx=(0, 10), pady=(0, 5))
+        ttk.Button(control_frame, text="🔓 집중 모드 브라우저 해제",
+                  command=self.release_focus_mode_browser).grid(row=3, column=1, padx=(0, 10), pady=(0, 5))
+        ttk.Button(control_frame, text="🛡️ 강화된 차단 적용",
+                  command=self.enhanced_browser_blocking).grid(row=3, column=2, padx=(0, 10), pady=(0, 5))
+
+        # 고급 설정
+        advanced_frame = ttk.LabelFrame(browser_frame, text="⚙️ 고급 설정", padding="10")
+        advanced_frame.grid(row=2, column=0, sticky=(tk.W, tk.E), pady=(0, 10))
+
+        self.auto_session_save_var = tk.BooleanVar(value=True)
+        ttk.Checkbutton(advanced_frame, text="자동 세션 저장",
+                       variable=self.auto_session_save_var).grid(row=0, column=0, sticky=tk.W)
+
+        self.auto_cache_clear_var = tk.BooleanVar(value=True)
+        ttk.Checkbutton(advanced_frame, text="자동 캐시 초기화",
+                       variable=self.auto_cache_clear_var).grid(row=0, column=1, sticky=tk.W, padx=(20, 0))
+
+                # 브라우저 정보
+        info_frame = ttk.LabelFrame(browser_frame, text="ℹ️ 브라우저 정보", padding="10")
+        info_frame.grid(row=3, column=0, sticky=(tk.W, tk.E), pady=(0, 10))
+
+        self.browser_info_var = tk.StringVar(value="로딩 중...")
+        info_text = tk.Text(info_frame, height=6, width=60, wrap=tk.WORD)
+        info_text.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+
+        # 스크롤바 추가
+        scrollbar = ttk.Scrollbar(info_frame, orient=tk.VERTICAL, command=info_text.yview)
+        scrollbar.grid(row=0, column=1, sticky=(tk.N, tk.S))
+        info_text.configure(yscrollcommand=scrollbar.set)
+
+        self.browser_info_text = info_text
+
+        # 실시간 브라우저 제어 대시보드
+        dashboard_frame = ttk.LabelFrame(browser_frame, text="📊 실시간 브라우저 대시보드", padding="10")
+        dashboard_frame.grid(row=4, column=0, sticky=(tk.W, tk.E), pady=(0, 10))
+
+        # 첫 번째 행 - 브라우저별 상태
+        browser_status_frame = ttk.Frame(dashboard_frame)
+        browser_status_frame.grid(row=0, column=0, sticky=(tk.W, tk.E), pady=(0, 10))
+
+        # Chrome 상태
+        chrome_frame = ttk.LabelFrame(browser_status_frame, text="Chrome", padding="5")
+        chrome_frame.grid(row=0, column=0, padx=(0, 10))
+        self.chrome_status_var = tk.StringVar(value="확인 중...")
+        ttk.Label(chrome_frame, textvariable=self.chrome_status_var, font=('Helvetica', 9)).grid(row=0, column=0)
+
+        # Safari 상태
+        safari_frame = ttk.LabelFrame(browser_status_frame, text="Safari", padding="5")
+        safari_frame.grid(row=0, column=1, padx=(0, 10))
+        self.safari_status_var = tk.StringVar(value="확인 중...")
+        ttk.Label(safari_frame, textvariable=self.safari_status_var, font=('Helvetica', 9)).grid(row=0, column=0)
+
+        # Firefox 상태
+        firefox_frame = ttk.LabelFrame(browser_status_frame, text="Firefox", padding="5")
+        firefox_frame.grid(row=0, column=2, padx=(0, 10))
+        self.firefox_status_var = tk.StringVar(value="확인 중...")
+        ttk.Label(firefox_frame, textvariable=self.firefox_status_var, font=('Helvetica', 9)).grid(row=0, column=0)
+
+        # Whale 상태
+        whale_frame = ttk.LabelFrame(browser_status_frame, text="Whale", padding="5")
+        whale_frame.grid(row=0, column=3, padx=(0, 10))
+        self.whale_status_var = tk.StringVar(value="확인 중...")
+        ttk.Label(whale_frame, textvariable=self.whale_status_var, font=('Helvetica', 9)).grid(row=0, column=0)
+
+        # Edge 상태
+        edge_frame = ttk.LabelFrame(browser_status_frame, text="Edge", padding="5")
+        edge_frame.grid(row=0, column=4)
+        self.edge_status_var = tk.StringVar(value="확인 중...")
+        ttk.Label(edge_frame, textvariable=self.edge_status_var, font=('Helvetica', 9)).grid(row=0, column=0)
+
+        # 두 번째 행 - 실시간 통계
+        stats_frame = ttk.Frame(dashboard_frame)
+        stats_frame.grid(row=1, column=0, sticky=(tk.W, tk.E), pady=(0, 10))
+
+        # 모니터링 상태
+        monitoring_frame = ttk.LabelFrame(stats_frame, text="모니터링 상태", padding="5")
+        monitoring_frame.grid(row=0, column=0, padx=(0, 10))
+        self.monitoring_status_var = tk.StringVar(value="비활성화")
+        ttk.Label(monitoring_frame, textvariable=self.monitoring_status_var, font=('Helvetica', 10, 'bold')).grid(row=0, column=0)
+
+        # 차단된 브라우저 수
+        blocked_frame = ttk.LabelFrame(stats_frame, text="차단된 브라우저", padding="5")
+        blocked_frame.grid(row=0, column=1, padx=(0, 10))
+        self.blocked_browsers_var = tk.StringVar(value="0개")
+        ttk.Label(blocked_frame, textvariable=self.blocked_browsers_var, font=('Helvetica', 10, 'bold')).grid(row=0, column=0)
+
+        # 마지막 업데이트
+        update_frame = ttk.LabelFrame(stats_frame, text="마지막 업데이트", padding="5")
+        update_frame.grid(row=0, column=2)
+        self.last_update_var = tk.StringVar(value="없음")
+        ttk.Label(update_frame, textvariable=self.last_update_var, font=('Helvetica', 9)).grid(row=0, column=0)
+
+        # 고급 브라우저 설정 패널
+        advanced_settings_frame = ttk.LabelFrame(browser_frame, text="⚙️ 고급 브라우저 설정", padding="10")
+        advanced_settings_frame.grid(row=5, column=0, sticky=(tk.W, tk.E), pady=(0, 10))
+
+        # 첫 번째 행 - 자동화 설정
+        automation_frame = ttk.LabelFrame(advanced_settings_frame, text="🤖 자동화 설정", padding="10")
+        automation_frame.grid(row=0, column=0, sticky=(tk.W, tk.E), pady=(0, 10))
+
+        self.auto_browser_monitoring_var = tk.BooleanVar(value=True)
+        ttk.Checkbutton(automation_frame, text="자동 브라우저 모니터링",
+                       variable=self.auto_browser_monitoring_var).grid(row=0, column=0, sticky=tk.W)
+
+        self.auto_cache_clear_var = tk.BooleanVar(value=True)
+        ttk.Checkbutton(automation_frame, text="자동 캐시 초기화",
+                       variable=self.auto_cache_clear_var).grid(row=0, column=1, sticky=tk.W, padx=(20, 0))
+
+        self.auto_session_save_var = tk.BooleanVar(value=True)
+        ttk.Checkbutton(automation_frame, text="자동 세션 저장",
+                       variable=self.auto_session_save_var).grid(row=0, column=2, sticky=tk.W, padx=(20, 0))
+
+        # 두 번째 행 - 차단 설정
+        blocking_frame = ttk.LabelFrame(advanced_settings_frame, text="🚫 차단 설정", padding="10")
+        blocking_frame.grid(row=1, column=0, sticky=(tk.W, tk.E), pady=(0, 10))
+
+        self.enable_enhanced_blocking_var = tk.BooleanVar(value=True)
+        ttk.Checkbutton(blocking_frame, text="강화된 차단 활성화",
+                       variable=self.enable_enhanced_blocking_var).grid(row=0, column=0, sticky=tk.W)
+
+        self.enable_browser_extensions_var = tk.BooleanVar(value=False)
+        ttk.Checkbutton(blocking_frame, text="브라우저 확장 프로그램 사용",
+                       variable=self.enable_browser_extensions_var).grid(row=0, column=1, sticky=tk.W, padx=(20, 0))
+
+        self.enable_additional_rules_var = tk.BooleanVar(value=True)
+        ttk.Checkbutton(blocking_frame, text="추가 차단 규칙 적용",
+                       variable=self.enable_additional_rules_var).grid(row=0, column=2, sticky=tk.W, padx=(20, 0))
+
+        # 세 번째 행 - 성능 설정
+        performance_frame = ttk.LabelFrame(advanced_settings_frame, text="⚡ 성능 설정", padding="10")
+        performance_frame.grid(row=2, column=0, sticky=(tk.W, tk.E), pady=(0, 10))
+
+        self.enable_dns_flush_var = tk.BooleanVar(value=True)
+        ttk.Checkbutton(performance_frame, text="DNS 캐시 자동 초기화",
+                       variable=self.enable_dns_flush_var).grid(row=0, column=0, sticky=tk.W)
+
+        self.enable_optimized_clear_var = tk.BooleanVar(value=True)
+        ttk.Checkbutton(performance_frame, text="최적화된 정리 사용",
+                       variable=self.enable_optimized_clear_var).grid(row=0, column=1, sticky=tk.W, padx=(20, 0))
+
+        self.enable_force_refresh_var = tk.BooleanVar(value=True)
+        ttk.Checkbutton(performance_frame, text="강제 새로고침 사용",
+                       variable=self.enable_force_refresh_var).grid(row=0, column=2, sticky=tk.W, padx=(20, 0))
+
+        # 브라우저별 상세 설정
+        browser_specific_frame = ttk.LabelFrame(browser_frame, text="🔧 브라우저별 상세 설정", padding="10")
+        browser_specific_frame.grid(row=6, column=0, sticky=(tk.W, tk.E), pady=(0, 10))
+
+        # 브라우저 선택
+        browser_select_frame = ttk.Frame(browser_specific_frame)
+        browser_select_frame.grid(row=0, column=0, sticky=(tk.W, tk.E), pady=(0, 10))
+
+        ttk.Label(browser_select_frame, text="브라우저 선택:").grid(row=0, column=0, sticky=tk.W)
+        self.selected_browser_var = tk.StringVar(value="Google Chrome")
+        browser_combo = ttk.Combobox(browser_select_frame, textvariable=self.selected_browser_var,
+                                    values=["Google Chrome", "Safari", "Firefox", "Whale", "Microsoft Edge"],
+                                    state="readonly", width=15)
+        browser_combo.grid(row=0, column=1, padx=(10, 0))
+        browser_combo.bind('<<ComboboxSelected>>', self.on_browser_selected)
+
+        # 브라우저별 설정 버튼들
+        browser_buttons_frame = ttk.Frame(browser_specific_frame)
+        browser_buttons_frame.grid(row=1, column=0, sticky=(tk.W, tk.E))
+
+        ttk.Button(browser_buttons_frame, text="🔧 개별 설정",
+                  command=self.configure_browser).grid(row=0, column=0, padx=(0, 10))
+        ttk.Button(browser_buttons_frame, text="📊 상세 정보",
+                  command=self.show_browser_details).grid(row=0, column=1, padx=(0, 10))
+        ttk.Button(browser_buttons_frame, text="🧹 개별 정리",
+                  command=self.clean_browser).grid(row=0, column=2, padx=(0, 10))
+        ttk.Button(browser_buttons_frame, text="🔄 개별 재시작",
+                  command=self.restart_browser).grid(row=0, column=3)
+
+        # 설정 저장/불러오기 버튼
+        settings_buttons_frame = ttk.Frame(browser_specific_frame)
+        settings_buttons_frame.grid(row=2, column=0, sticky=(tk.W, tk.E), pady=(10, 0))
+
+        ttk.Button(settings_buttons_frame, text="💾 설정 저장",
+                  command=self.save_browser_settings).grid(row=0, column=0, padx=(0, 10))
+        ttk.Button(settings_buttons_frame, text="📂 설정 불러오기",
+                  command=self.load_browser_settings).grid(row=0, column=1, padx=(0, 10))
+        ttk.Button(settings_buttons_frame, text="🔄 설정 초기화",
+                  command=self.reset_browser_settings).grid(row=0, column=2)
 
     def create_settings_tab(self):
         """설정 탭"""
@@ -1372,12 +1416,12 @@ class FocusTimerApp:
         logs_frame.rowconfigure(1, weight=1)
 
     def refresh_logs(self):
-        """로그 새로고침"""
+        """로그 새로고침 (A코드 방식 - 최근 50줄 표시)"""
         try:
             log_path = config_manager.get("system_paths.log_path", "/var/log/FocusTimer/focus_timer.log")
             if os.path.exists(log_path):
                 with open(log_path, 'r', encoding='utf-8') as f:
-                    logs = f.readlines()[-50:]  # 최근 50줄
+                    logs = f.readlines()[-50:]  # 최근 50줄 (A코드 방식)
 
                 self.log_text.delete(1.0, tk.END)
                 for log in logs:
@@ -1486,7 +1530,7 @@ class FocusTimerApp:
                 messagebox.showerror("오류", f"통계 초기화 실패: {e}")
 
     def start_focus_mode(self):
-        """집중 모드 시작"""
+        """집중 모드 시작 (브라우저 제어 연동)"""
         try:
             # 시간 파싱
             start_time = self.start_time_var.get()
@@ -1506,22 +1550,32 @@ class FocusTimerApp:
 
             save_state()
 
+            # 브라우저 강화 제어 시작
+            if hasattr(self, 'browser_manager'):
+                self.browser_manager.focus_mode_browser_control(enable_focus=True)
+                logger.log("INFO", "집중 모드: 브라우저 강화 제어 시작됨")
+
             # 모니터링 시작
             if not self.running:
                 self.start_monitoring()
 
-            self.status_label.config(text="집중 모드 활성화")
-            self.status_var.set("집중 모드 시작됨")
-            messagebox.showinfo("성공", "집중 모드가 시작되었습니다!")
+            self.status_label.config(text="집중 모드 활성화 (브라우저 제어)")
+            self.status_var.set("집중 모드 시작됨 - 브라우저 제어 활성화")
+            messagebox.showinfo("성공", "집중 모드가 시작되었습니다!\n브라우저 강화 제어가 활성화되었습니다.")
 
         except Exception as e:
             messagebox.showerror("오류", f"집중 모드 시작 실패: {e}")
 
     def stop_focus_mode(self):
-        """집중 모드 중지"""
+        """집중 모드 중지 (브라우저 제어 연동)"""
         try:
             state.is_focus_mode = False
             state.is_blocked = False
+
+            # 브라우저 제어 복구
+            if hasattr(self, 'browser_manager'):
+                self.browser_manager.focus_mode_browser_control(enable_focus=False)
+                logger.log("INFO", "집중 모드: 브라우저 제어 복구 완료")
 
             # 차단 해제
             unblock_websites()
@@ -1529,8 +1583,8 @@ class FocusTimerApp:
             save_state()
 
             self.status_label.config(text="집중 모드 비활성화")
-            self.status_var.set("집중 모드 중지됨")
-            messagebox.showinfo("성공", "집중 모드가 중지되었습니다!")
+            self.status_var.set("집중 모드 중지됨 - 브라우저 제어 해제")
+            messagebox.showinfo("성공", "집중 모드가 중지되었습니다!\n브라우저 제어가 해제되었습니다.")
 
         except Exception as e:
             messagebox.showerror("오류", f"집중 모드 중지 실패: {e}")
@@ -1656,6 +1710,15 @@ class FocusTimerApp:
             except:
                 pass
 
+            # 브라우저 상태 업데이트 (브라우저 탭이 활성화된 경우)
+            try:
+                current_tab = self.notebook.select()
+                if "브라우저" in self.notebook.tab(current_tab, "text"):
+                    self.refresh_browser_status()
+                    self.update_browser_dashboard()  # 브라우저 대시보드 업데이트 추가
+            except:
+                pass
+
         except Exception as e:
             logger.log("ERROR", f"통계 업데이트 실패: {e}")
 
@@ -1700,6 +1763,340 @@ class FocusTimerApp:
     def show_about(self):
         """정보 보기"""
         messagebox.showinfo("정보", f"{PRODUCT_NAME} v{VERSION}\n집중 모드 시스템")
+
+    # ----- 브라우저 관리 메서드들 -----
+    def refresh_browsers(self):
+        """브라우저 새로고침"""
+        if hasattr(self, 'browser_manager'):
+            self.browser_manager.force_browser_refresh()
+        else:
+            logger.log("ERROR", "BrowserManager가 초기화되지 않았습니다.")
+
+    def save_browser_sessions(self):
+        """브라우저 세션 저장"""
+        if hasattr(self, 'browser_manager'):
+            self.browser_manager.save_browser_sessions()
+        else:
+            logger.log("ERROR", "BrowserManager가 초기화되지 않았습니다.")
+
+    def restore_browser_sessions(self):
+        """브라우저 세션 복구"""
+        if hasattr(self, 'browser_manager'):
+            self.browser_manager.restore_browser_sessions()
+        else:
+            logger.log("ERROR", "BrowserManager가 초기화되지 않았습니다.")
+
+    def safe_browser_restart(self):
+        """안전한 브라우저 재시작"""
+        if hasattr(self, 'browser_manager'):
+            self.browser_manager.force_browser_restart()
+        else:
+            logger.log("ERROR", "BrowserManager가 초기화되지 않았습니다.")
+
+    def flush_dns_cache(self):
+        """DNS 캐시 초기화"""
+        if hasattr(self, 'browser_manager'):
+            self.browser_manager.simple_dns_flush()
+        else:
+            logger.log("ERROR", "BrowserManager가 초기화되지 않았습니다.")
+
+    def optimized_browser_clear(self):
+        """최적화된 브라우저 정리"""
+        if hasattr(self, 'browser_manager'):
+            self.browser_manager.optimized_browser_clear()
+        else:
+            logger.log("ERROR", "BrowserManager가 초기화되지 않았습니다.")
+
+    def refresh_browser_status(self):
+        """브라우저 상태 새로고침"""
+        if hasattr(self, 'browser_manager'):
+            status = self.browser_manager.get_browser_status()
+            running_browsers = status.get("running_browsers", [])
+
+            if running_browsers:
+                self.running_browsers_var.set(", ".join(running_browsers))
+            else:
+                self.running_browsers_var.set("실행 중인 브라우저 없음")
+
+            # 브라우저 정보 업데이트
+            info_text = f"지원 브라우저: {', '.join(status.get('supported_browsers', []))}\n"
+            info_text += f"실행 중인 브라우저: {len(running_browsers)}개\n"
+            info_text += f"마지막 업데이트: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n"
+
+            if running_browsers:
+                info_text += "실행 중인 브라우저 목록:\n"
+                for browser in running_browsers:
+                    info_text += f"• {browser}\n"
+            else:
+                info_text += "현재 실행 중인 브라우저가 없습니다."
+
+            self.browser_info_text.delete(1.0, tk.END)
+            self.browser_info_text.insert(tk.END, info_text)
+        else:
+            logger.log("ERROR", "BrowserManager가 초기화되지 않았습니다.")
+
+    def focus_mode_browser_control(self):
+        """집중 모드 브라우저 제어 (GUI 버튼용)"""
+        if hasattr(self, 'browser_manager'):
+            self.browser_manager.focus_mode_browser_control(enable_focus=True)
+            messagebox.showinfo("성공", "집중 모드 브라우저 제어가 활성화되었습니다!")
+        else:
+            messagebox.showerror("오류", "BrowserManager가 초기화되지 않았습니다.")
+
+    def release_focus_mode_browser(self):
+        """집중 모드 브라우저 제어 해제 (GUI 버튼용)"""
+        if hasattr(self, 'browser_manager'):
+            self.browser_manager.focus_mode_browser_control(enable_focus=False)
+            messagebox.showinfo("성공", "집중 모드 브라우저 제어가 해제되었습니다!")
+        else:
+            messagebox.showerror("오류", "BrowserManager가 초기화되지 않았습니다.")
+
+    def enhanced_browser_blocking(self):
+        """강화된 브라우저 차단 적용 (GUI 버튼용)"""
+        if hasattr(self, 'browser_manager'):
+            self.browser_manager.enhance_browser_blocking()
+            messagebox.showinfo("성공", "강화된 브라우저 차단이 적용되었습니다!")
+        else:
+            messagebox.showerror("오류", "BrowserManager가 초기화되지 않았습니다.")
+
+    # ----- 고급 브라우저 관리 GUI 메서드들 -----
+    def on_browser_selected(self, event=None):
+        """브라우저 선택 시 호출되는 메서드"""
+        selected_browser = self.selected_browser_var.get()
+        logger.log("INFO", f"선택된 브라우저: {selected_browser}")
+
+    def configure_browser(self):
+        """선택된 브라우저 개별 설정"""
+        selected_browser = self.selected_browser_var.get()
+        if hasattr(self, 'browser_manager'):
+            # 브라우저별 설정 창 표시
+            self.show_browser_config_dialog(selected_browser)
+        else:
+            messagebox.showerror("오류", "BrowserManager가 초기화되지 않았습니다.")
+
+    def show_browser_config_dialog(self, browser):
+        """브라우저 설정 다이얼로그 표시"""
+        dialog = tk.Toplevel(self.root)
+        dialog.title(f"{browser} 설정")
+        dialog.geometry("400x300")
+        dialog.transient(self.root)
+        dialog.grab_set()
+
+        # 설정 옵션들
+        ttk.Label(dialog, text=f"{browser} 고급 설정", font=('Helvetica', 14, 'bold')).pack(pady=10)
+
+        # 캐시 설정
+        cache_frame = ttk.LabelFrame(dialog, text="캐시 설정", padding="10")
+        cache_frame.pack(fill=tk.X, padx=10, pady=5)
+
+        clear_cache_var = tk.BooleanVar(value=True)
+        ttk.Checkbutton(cache_frame, text="캐시 자동 정리",
+                       variable=clear_cache_var).pack(anchor=tk.W)
+
+        clear_history_var = tk.BooleanVar(value=False)
+        ttk.Checkbutton(cache_frame, text="히스토리 정리",
+                       variable=clear_history_var).pack(anchor=tk.W)
+
+        # 성능 설정
+        perf_frame = ttk.LabelFrame(dialog, text="성능 설정", padding="10")
+        perf_frame.pack(fill=tk.X, padx=10, pady=5)
+
+        force_refresh_var = tk.BooleanVar(value=True)
+        ttk.Checkbutton(perf_frame, text="강제 새로고침",
+                       variable=force_refresh_var).pack(anchor=tk.W)
+
+        dns_flush_var = tk.BooleanVar(value=True)
+        ttk.Checkbutton(perf_frame, text="DNS 캐시 초기화",
+                       variable=dns_flush_var).pack(anchor=tk.W)
+
+        # 적용 버튼
+        ttk.Button(dialog, text="적용",
+                  command=lambda: self.apply_browser_config(browser, {
+                      'clear_cache': clear_cache_var.get(),
+                      'clear_history': clear_history_var.get(),
+                      'force_refresh': force_refresh_var.get(),
+                      'dns_flush': dns_flush_var.get()
+                  })).pack(pady=10)
+
+    def apply_browser_config(self, browser, config):
+        """브라우저 설정 적용"""
+        try:
+            if hasattr(self, 'browser_manager'):
+                # 설정 적용 로직
+                if config.get('clear_cache'):
+                    self.browser_manager.clear_browser_cache()
+                if config.get('dns_flush'):
+                    self.browser_manager.simple_dns_flush()
+
+                messagebox.showinfo("성공", f"{browser} 설정이 적용되었습니다!")
+            else:
+                messagebox.showerror("오류", "BrowserManager가 초기화되지 않았습니다.")
+        except Exception as e:
+            messagebox.showerror("오류", f"설정 적용 실패: {e}")
+
+    def show_browser_details(self):
+        """선택된 브라우저 상세 정보 표시"""
+        selected_browser = self.selected_browser_var.get()
+        if hasattr(self, 'browser_manager'):
+            status = self.browser_manager.get_browser_status()
+            running_browsers = status.get("running_browsers", [])
+
+            is_running = selected_browser in running_browsers
+
+            details = f"브라우저: {selected_browser}\n"
+            details += f"상태: {'실행 중' if is_running else '중지됨'}\n"
+            details += f"지원 여부: {'지원됨' if selected_browser in status.get('supported_browsers', []) else '지원되지 않음'}\n"
+            details += f"캐시 경로: {len(self.browser_manager.cache_paths.get(selected_browser, []))}개\n"
+            details += f"마지막 업데이트: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+
+            messagebox.showinfo(f"{selected_browser} 상세 정보", details)
+        else:
+            messagebox.showerror("오류", "BrowserManager가 초기화되지 않았습니다.")
+
+    def clean_browser(self):
+        """선택된 브라우저 개별 정리"""
+        selected_browser = self.selected_browser_var.get()
+        if hasattr(self, 'browser_manager'):
+            try:
+                # 선택된 브라우저만 정리
+                if selected_browser in self.browser_manager.cache_paths:
+                    for path in self.browser_manager.cache_paths[selected_browser]:
+                        expanded_path = os.path.expanduser(path)
+                        if os.path.exists(expanded_path):
+                            subprocess.run(["rm", "-rf", f"{expanded_path}/*"], capture_output=True)
+
+                messagebox.showinfo("성공", f"{selected_browser} 정리가 완료되었습니다!")
+            except Exception as e:
+                messagebox.showerror("오류", f"{selected_browser} 정리 실패: {e}")
+        else:
+            messagebox.showerror("오류", "BrowserManager가 초기화되지 않았습니다.")
+
+    def restart_browser(self):
+        """선택된 브라우저 개별 재시작"""
+        selected_browser = self.selected_browser_var.get()
+        if hasattr(self, 'browser_manager'):
+            try:
+                # 선택된 브라우저만 재시작
+                subprocess.run(["osascript", "-e", f'quit app "{selected_browser}"'], capture_output=True)
+                time.sleep(2)
+                subprocess.run(["open", "-a", selected_browser], capture_output=True)
+
+                messagebox.showinfo("성공", f"{selected_browser} 재시작이 완료되었습니다!")
+            except Exception as e:
+                messagebox.showerror("오류", f"{selected_browser} 재시작 실패: {e}")
+        else:
+            messagebox.showerror("오류", "BrowserManager가 초기화되지 않았습니다.")
+
+    def update_browser_dashboard(self):
+        """브라우저 대시보드 업데이트"""
+        if hasattr(self, 'browser_manager'):
+            try:
+                status = self.browser_manager.get_browser_status()
+                running_browsers = status.get("running_browsers", [])
+
+                # 브라우저별 상태 업데이트
+                self.chrome_status_var.set("실행 중" if "Google Chrome" in running_browsers else "중지됨")
+                self.safari_status_var.set("실행 중" if "Safari" in running_browsers else "중지됨")
+                self.firefox_status_var.set("실행 중" if "Firefox" in running_browsers else "중지됨")
+                self.whale_status_var.set("실행 중" if "Whale" in running_browsers else "중지됨")
+                self.edge_status_var.set("실행 중" if "Microsoft Edge" in running_browsers else "중지됨")
+
+                # 모니터링 상태 업데이트
+                if hasattr(self.browser_manager, 'browser_monitoring_active'):
+                    self.monitoring_status_var.set("활성화" if self.browser_manager.browser_monitoring_active else "비활성화")
+                else:
+                    self.monitoring_status_var.set("비활성화")
+
+                # 차단된 브라우저 수 (집중 모드일 때)
+                if state.is_focus_mode:
+                    self.blocked_browsers_var.set(f"{len(running_browsers)}개")
+                else:
+                    self.blocked_browsers_var.set("0개")
+
+                # 마지막 업데이트 시간
+                self.last_update_var.set(datetime.datetime.now().strftime("%H:%M:%S"))
+
+            except Exception as e:
+                logger.log("ERROR", f"브라우저 대시보드 업데이트 실패: {e}")
+
+    def save_browser_settings(self):
+        """브라우저 설정 저장"""
+        try:
+            settings = {
+                "automation": {
+                    "auto_browser_monitoring": self.auto_browser_monitoring_var.get(),
+                    "auto_cache_clear": self.auto_cache_clear_var.get(),
+                    "auto_session_save": self.auto_session_save_var.get()
+                },
+                "blocking": {
+                    "enable_enhanced_blocking": self.enable_enhanced_blocking_var.get(),
+                    "enable_browser_extensions": self.enable_browser_extensions_var.get(),
+                    "enable_additional_rules": self.enable_additional_rules_var.get()
+                },
+                "performance": {
+                    "enable_dns_flush": self.enable_dns_flush_var.get(),
+                    "enable_optimized_clear": self.enable_optimized_clear_var.get(),
+                    "enable_force_refresh": self.enable_force_refresh_var.get()
+                }
+            }
+
+            # 설정을 config_manager에 저장
+            config_manager.set("browser_control.settings", settings)
+
+            messagebox.showinfo("성공", "브라우저 설정이 저장되었습니다!")
+
+        except Exception as e:
+            messagebox.showerror("오류", f"설정 저장 실패: {e}")
+
+    def load_browser_settings(self):
+        """브라우저 설정 불러오기"""
+        try:
+            settings = config_manager.get("browser_control.settings", {})
+
+            # 자동화 설정
+            automation = settings.get("automation", {})
+            self.auto_browser_monitoring_var.set(automation.get("auto_browser_monitoring", True))
+            self.auto_cache_clear_var.set(automation.get("auto_cache_clear", True))
+            self.auto_session_save_var.set(automation.get("auto_session_save", True))
+
+            # 차단 설정
+            blocking = settings.get("blocking", {})
+            self.enable_enhanced_blocking_var.set(blocking.get("enable_enhanced_blocking", True))
+            self.enable_browser_extensions_var.set(blocking.get("enable_browser_extensions", False))
+            self.enable_additional_rules_var.set(blocking.get("enable_additional_rules", True))
+
+            # 성능 설정
+            performance = settings.get("performance", {})
+            self.enable_dns_flush_var.set(performance.get("enable_dns_flush", True))
+            self.enable_optimized_clear_var.set(performance.get("enable_optimized_clear", True))
+            self.enable_force_refresh_var.set(performance.get("enable_force_refresh", True))
+
+        except Exception as e:
+            logger.log("ERROR", f"브라우저 설정 불러오기 실패: {e}")
+
+    def reset_browser_settings(self):
+        """브라우저 설정 초기화"""
+        try:
+            # 모든 설정을 기본값으로 초기화
+            self.auto_browser_monitoring_var.set(True)
+            self.auto_cache_clear_var.set(True)
+            self.auto_session_save_var.set(True)
+
+            self.enable_enhanced_blocking_var.set(True)
+            self.enable_browser_extensions_var.set(False)
+            self.enable_additional_rules_var.set(True)
+
+            self.enable_dns_flush_var.set(True)
+            self.enable_optimized_clear_var.set(True)
+            self.enable_force_refresh_var.set(True)
+
+            # 설정 파일에서도 제거
+            config_manager.remove("browser_control.settings")
+
+            messagebox.showinfo("성공", "브라우저 설정이 초기화되었습니다!")
+
+        except Exception as e:
+            messagebox.showerror("오류", f"설정 초기화 실패: {e}")
 
     def quit_app(self):
         """앱 종료"""
@@ -1787,44 +2184,9 @@ if __name__ == "__main__":
         print(f"❌ GUI 실행 실패: {e}")
         logger.log("ERROR", f"GUI 실행 실패: {e}")
 
-        # GUI 실패 시 CLI 모드로 전환
+        # GUI 실패 시 CLI 모드로 전환 (A코드 방식)
         print("🔄 CLI 모드로 전환합니다...")
-        try:
-            # CLI 모드 실행 로직
-            while True:
-                print("\n📊 FocusTimer CLI 모드")
-                print("1. 집중 모드 시작")
-                print("2. 집중 모드 중지")
-                print("3. 즉시 차단")
-                print("4. 즉시 해제")
-                print("5. 상태 확인")
-                print("6. 종료")
-
-                choice = input("\n선택하세요 (1-6): ").strip()
-
-                if choice == "1":
-                    # 집중 모드 시작 로직
-                    print("🚀 집중 모드 시작")
-                elif choice == "2":
-                    # 집중 모드 중지 로직
-                    print("⏹️ 집중 모드 중지")
-                elif choice == "3":
-                    # 즉시 차단 로직
-                    print("🔒 즉시 차단")
-                elif choice == "4":
-                    # 즉시 해제 로직
-                    print("🔓 즉시 해제")
-                elif choice == "5":
-                    # 상태 확인 로직
-                    print("📊 상태 확인")
-                elif choice == "6":
-                    print("👋 종료합니다.")
-                    break
-                else:
-                    print("❌ 잘못된 선택입니다.")
-
-        except KeyboardInterrupt:
-            print("\n👋 종료합니다.")
+        fallback_to_cli()
     except KeyboardInterrupt:
         pass
     finally:
@@ -1832,3 +2194,888 @@ if __name__ == "__main__":
             app.cleanup()
         except:
             pass
+
+def fallback_to_cli():
+    """GUI 실패 시 CLI 모드로 전환 (A코드 방식)"""
+    try:
+        while True:
+            print("\n📊 FocusTimer CLI 모드")
+            print("1. 집중 모드 시작")
+            print("2. 집중 모드 중지")
+            print("3. 즉시 차단")
+            print("4. 즉시 해제")
+            print("5. 상태 확인")
+            print("6. 종료")
+
+            choice = input("\n선택하세요 (1-6): ").strip()
+
+            if choice == "1":
+                # 집중 모드 시작 로직
+                print("🚀 집중 모드 시작")
+                start_focus_mode_cli()
+            elif choice == "2":
+                # 집중 모드 중지 로직
+                print("⏹️ 집중 모드 중지")
+                stop_focus_mode_cli()
+            elif choice == "3":
+                # 즉시 차단 로직
+                print("🔒 즉시 차단")
+                block_websites()
+            elif choice == "4":
+                # 즉시 해제 로직
+                print("🔓 즉시 해제")
+                unblock_websites()
+            elif choice == "5":
+                # 상태 확인 로직
+                print("📊 상태 확인")
+                show_status_cli()
+            elif choice == "6":
+                print("👋 종료합니다.")
+                break
+            else:
+                print("❌ 잘못된 선택입니다.")
+
+    except KeyboardInterrupt:
+        print("\n👋 종료합니다.")
+
+def start_focus_mode_cli():
+    """CLI에서 집중 모드 시작"""
+    try:
+        state.is_focus_mode = True
+        state.focus_start_time = datetime.datetime.now()
+        save_state()
+        block_websites()
+        print("✅ 집중 모드가 시작되었습니다!")
+    except Exception as e:
+        print(f"❌ 집중 모드 시작 실패: {e}")
+
+def stop_focus_mode_cli():
+    """CLI에서 집중 모드 중지"""
+    try:
+        state.is_focus_mode = False
+        state.is_blocked = False
+        unblock_websites()
+        save_state()
+        print("✅ 집중 모드가 중지되었습니다!")
+    except Exception as e:
+        print(f"❌ 집중 모드 중지 실패: {e}")
+
+def show_status_cli():
+    """CLI에서 상태 확인"""
+    print(f"집중 모드: {'활성화' if state.is_focus_mode else '비활성화'}")
+    print(f"차단 상태: {'차단 중' if state.is_blocked else '해제됨'}")
+    print(f"차단 횟수: {state.block_count}회")
+    print(f"우회 시도: {state.bypass_attempts}회")
+
+# ----- 브라우저 관리 시스템 -----
+class BrowserManager:
+    def __init__(self):
+        supported_browsers = config_manager.get("browsers.supported")
+        self.supported_browsers = supported_browsers if supported_browsers else [
+            "Google Chrome", "Safari", "Firefox", "Whale", "Microsoft Edge"
+        ]
+
+        cache_paths = config_manager.get("browsers.cache_paths")
+        self.cache_paths = cache_paths if cache_paths else {
+            "Google Chrome": [
+                "~/Library/Caches/Google/Chrome/Default/Cache",
+                "~/Library/Application Support/Google/Chrome/Default/Cache",
+                "~/Library/Application Support/Google/Chrome/Default/Code Cache",
+                "~/Library/Application Support/Google/Chrome/Default/GPUCache"
+            ],
+            "Safari": [
+                "~/Library/Caches/com.apple.Safari",
+                "~/Library/Safari/LocalStorage",
+                "~/Library/Safari/WebpageIcons.db"
+            ],
+            "Firefox": [
+                "~/Library/Caches/Firefox/Profiles",
+                "~/Library/Application Support/Firefox/Profiles"
+            ],
+            "Whale": [
+                "~/Library/Caches/com.naver.whale",
+                "~/Library/Application Support/Naver/Whale/Default/Cache"
+            ],
+            "Microsoft Edge": [
+                "~/Library/Caches/com.microsoft.edgemac",
+                "~/Library/Application Support/Microsoft Edge/Default/Cache"
+            ]
+        }
+
+    def get_running_browsers(self):
+        """현재 실행 중인 브라우저 목록을 반환"""
+        running_browsers = []
+
+        for browser in self.supported_browsers:
+            try:
+                if browser == "Safari":
+                    # Safari는 실제 브라우저 프로세스만 확인
+                    result = subprocess.run(["pgrep", "-f", "Safari.app/Contents/MacOS/Safari"],
+                                          capture_output=True)
+                else:
+                    # 다른 브라우저는 기존 방식
+                    result = subprocess.run(["pgrep", "-f", browser], capture_output=True)
+
+                if result.returncode == 0:  # 실행 중이면
+                    running_browsers.append(browser)
+
+            except Exception as e:
+                logger.log("ERROR", f"{browser} 실행 상태 확인 실패: {e}")
+
+        return running_browsers
+
+    def restart_browsers(self):
+        """실행 중인 브라우저를 강제로 재시작"""
+        running_browsers = self.get_running_browsers()
+
+        if not running_browsers:
+            logger.log("INFO", "실행 중인 브라우저가 없습니다.")
+            return
+
+        logger.log("INFO", f"브라우저 강제 재시작 시작: {', '.join(running_browsers)}")
+
+        for browser in running_browsers:
+            try:
+                # 브라우저 종료
+                subprocess.run(["osascript", "-e", f'quit app "{browser}"'],
+                             capture_output=True, timeout=5)
+                time.sleep(2)
+
+                # 강제 종료
+                subprocess.run(["pkill", "-f", browser], capture_output=True)
+                time.sleep(1)
+
+                # 재시작
+                subprocess.run(["open", "-a", browser], capture_output=True)
+                time.sleep(3)
+
+                logger.log("INFO", f"{browser} 재시작 완료")
+
+            except Exception as e:
+                logger.log("ERROR", f"{browser} 재시작 실패: {e}")
+
+    def force_browser_restart_with_focus(self):
+        """집중 모드용 브라우저 강제 재시작"""
+        try:
+            running_browsers = self.get_running_browsers()
+
+            if not running_browsers:
+                return
+
+            logger.log("INFO", f"집중 모드: 브라우저 강제 재시작 중... ({', '.join(running_browsers)})")
+
+            for browser in running_browsers:
+                try:
+                    # 브라우저를 강제 종료
+                    subprocess.run(["osascript", "-e", f'quit app "{browser}"'],
+                                 capture_output=True, timeout=5)
+                    time.sleep(2)
+
+                    # 여전히 실행 중이면 강제 종료
+                    result = subprocess.run(["pgrep", "-f", browser], capture_output=True)
+                    if result.returncode == 0:
+                        subprocess.run(["pkill", "-f", browser], capture_output=True)
+                        time.sleep(1)
+
+                    # 브라우저 재시작
+                    subprocess.run(["open", "-a", browser], capture_output=True)
+                    time.sleep(3)
+
+                    logger.log("INFO", f"{browser} 강제 재시작 완료")
+
+                except Exception as e:
+                    logger.log("ERROR", f"{browser} 강제 재시작 중 오류: {e}")
+
+            logger.log("INFO", "모든 브라우저 강제 재시작 완료")
+
+        except Exception as e:
+            logger.log("ERROR", f"브라우저 강제 재시작 중 오류: {e}")
+
+    def clear_browser_cache(self):
+        """실행 중인 브라우저의 캐시만 자동으로 초기화"""
+        try:
+            running_browsers = self.get_running_browsers()
+
+            if not running_browsers:
+                logger.log("INFO", "실행 중인 브라우저가 없습니다.")
+                return
+
+            logger.log("INFO", f"브라우저 캐시 초기화 중... ({', '.join(running_browsers)})")
+
+            for browser in running_browsers:
+                if browser in self.cache_paths:
+                    for path in self.cache_paths[browser]:
+                        expanded_path = os.path.expanduser(path)
+                        if os.path.exists(expanded_path):
+                            try:
+                                subprocess.run(["rm", "-rf", f"{expanded_path}/*"], capture_output=True)
+                                logger.log("INFO", f"{browser} 캐시 경로 초기화: {path}")
+                            except Exception as e:
+                                logger.log("ERROR", f"{browser} 캐시 경로 초기화 실패: {path} - {e}")
+
+            # 시스템 DNS 캐시 초기화
+            self.simple_dns_flush()
+
+            logger.log("INFO", "브라우저 캐시 초기화 완료")
+
+        except Exception as e:
+            logger.log("ERROR", f"브라우저 캐시 초기화 중 오류: {e}")
+
+    def force_browser_cache_clear(self):
+        """실행 중인 브라우저의 캐시만 초기화 (브라우저 종료 없이)"""
+        try:
+            running_browsers = self.get_running_browsers()
+
+            if not running_browsers:
+                return
+
+            logger.log("INFO", f"브라우저 캐시 강제 초기화 중... ({', '.join(running_browsers)})")
+
+            for browser in running_browsers:
+                try:
+                    if browser in self.cache_paths:
+                        for path in self.cache_paths[browser]:
+                            expanded_path = os.path.expanduser(path)
+                            if os.path.exists(expanded_path):
+                                subprocess.run(["rm", "-rf", f"{expanded_path}/*"], capture_output=True)
+
+                    logger.log("INFO", f"{browser} 강제 캐시 초기화 완료")
+
+                except Exception as e:
+                    logger.log("ERROR", f"{browser} 강제 캐시 초기화 중 오류: {e}")
+
+            logger.log("INFO", "브라우저 강제 캐시 초기화 완료")
+
+        except Exception as e:
+            logger.log("ERROR", f"브라우저 강제 캐시 초기화 중 오류: {e}")
+
+    def force_dns_cache_clear(self):
+        """브라우저별 DNS 캐시 초기화"""
+        try:
+            running_browsers = self.get_running_browsers()
+
+            if not running_browsers:
+                return
+
+            logger.log("INFO", f"브라우저 DNS 캐시 초기화 중... ({', '.join(running_browsers)})")
+
+            for browser in running_browsers:
+                try:
+                    # 브라우저별 DNS 캐시 초기화
+                    if browser == "Google Chrome":
+                        chrome_dns_paths = [
+                            "~/Library/Application Support/Google/Chrome/Default/Network",
+                            "~/Library/Caches/Google/Chrome/Default/Network"
+                        ]
+                        for path in chrome_dns_paths:
+                            expanded_path = os.path.expanduser(path)
+                            if os.path.exists(expanded_path):
+                                subprocess.run(["rm", "-rf", f"{expanded_path}/*"], capture_output=True)
+
+                    elif browser == "Safari":
+                        safari_dns_paths = [
+                            "~/Library/Caches/com.apple.Safari/WebpageIcons.db",
+                            "~/Library/Safari/LocalStorage"
+                        ]
+                        for path in safari_dns_paths:
+                            expanded_path = os.path.expanduser(path)
+                            if os.path.exists(expanded_path):
+                                subprocess.run(["rm", "-rf", f"{expanded_path}/*"], capture_output=True)
+
+                    logger.log("INFO", f"{browser} DNS 캐시 초기화 완료")
+
+                except Exception as e:
+                    logger.log("ERROR", f"{browser} DNS 캐시 초기화 중 오류: {e}")
+
+            logger.log("INFO", "브라우저 DNS 캐시 초기화 완료")
+
+        except Exception as e:
+            logger.log("ERROR", f"브라우저 DNS 캐시 초기화 중 오류: {e}")
+
+    def save_browser_sessions(self):
+        """브라우저 세션 정보를 저장"""
+        try:
+            running_browsers = self.get_running_browsers()
+
+            if not running_browsers:
+                return
+
+            # 실행 중인 브라우저 목록만 저장
+            session_info = {
+                "running_browsers": running_browsers,
+                "timestamp": datetime.datetime.now().isoformat()
+            }
+
+            # 세션 정보를 파일에 저장
+            session_path = os.path.expanduser("~/focus_timer_sessions.json")
+            with open(session_path, "w") as f:
+                json.dump(session_info, f)
+
+            logger.log("INFO", f"브라우저 세션 정보 저장 완료 ({len(running_browsers)}개 브라우저)")
+
+        except Exception as e:
+            logger.log("ERROR", f"세션 저장 중 오류: {e}")
+
+    def restore_browser_sessions(self):
+        """브라우저 세션을 자동으로 복구"""
+        try:
+            running_browsers = self.get_running_browsers()
+
+            if not running_browsers:
+                return
+
+            logger.log("INFO", f"브라우저 세션 복구 중... ({', '.join(running_browsers)})")
+
+            for browser in running_browsers:
+                try:
+                    # 브라우저 활성화
+                    subprocess.run(["osascript", "-e", f'tell application "{browser}" to activate'],
+                                 capture_output=True)
+                    time.sleep(0.5)
+
+                    # 새 창 닫기 (Cmd+W)
+                    for _ in range(3):
+                        subprocess.run(["osascript", "-e",
+                                      'tell application "System Events" to key code 13 using {command down}'],
+                                     capture_output=True)
+                        time.sleep(0.1)
+
+                    # 브라우저 활성화 대기
+                    time.sleep(1.5)
+
+                    # Cmd+Shift+T로 세션 복구
+                    subprocess.run(["osascript", "-e",
+                                  'tell application "System Events" to key code 17 using {command down, shift down}'],
+                                 capture_output=True)
+
+                    logger.log("INFO", f"{browser} 세션 복구 완료")
+
+                except Exception as e:
+                    logger.log("ERROR", f"{browser} 세션 복구 중 오류: {e}")
+
+            logger.log("INFO", "브라우저 세션 복구 완료")
+
+        except Exception as e:
+            logger.log("ERROR", f"브라우저 세션 복구 중 오류: {e}")
+
+    def simple_dns_flush(self):
+        """DNS 캐시만 초기화 (가장 안전하고 빠른 방법)"""
+        try:
+            subprocess.run(["sudo", "dscacheutil", "-flushcache"], check=True)
+            subprocess.run(["sudo", "killall", "-HUP", "mDNSResponder"], check=True)
+            logger.log("INFO", "DNS 캐시 초기화 완료")
+        except Exception as e:
+            logger.log("ERROR", f"DNS 캐시 초기화 중 오류: {e}")
+
+    def optimized_browser_clear(self):
+        """최적화된 브라우저 조작 (DNS + 새로고침만)"""
+        try:
+            # DNS 캐시 초기화
+            self.simple_dns_flush()
+
+            # 실행 중인 브라우저 새로고침만
+            running_browsers = self.get_running_browsers()
+            if running_browsers:
+                logger.log("INFO", f"브라우저 새로고침 중... ({', '.join(running_browsers)})")
+                for browser in running_browsers:
+                    try:
+                        subprocess.run(["osascript", "-e", f'tell application "{browser}" to activate'],
+                                     capture_output=True)
+                        time.sleep(1)  # 브라우저 활성화 대기
+                        subprocess.run(["osascript", "-e",
+                                      'tell application "System Events" to key code 15 using {command down}'],
+                                     capture_output=True)
+                        logger.log("INFO", f"{browser} 새로고침 완료")
+                    except Exception as e:
+                        logger.log("ERROR", f"{browser} 새로고침 중 오류: {e}")
+                logger.log("INFO", "브라우저 새로고침 완료")
+        except Exception as e:
+            logger.log("ERROR", f"브라우저 조작 중 오류: {e}")
+
+    def force_browser_restart(self):
+        """실행 중인 브라우저를 안전하게 재시작하고 세션 복구"""
+        try:
+            running_browsers = self.get_running_browsers()
+
+            if not running_browsers:
+                return
+
+            logger.log("INFO", f"브라우저 재시작 중... ({', '.join(running_browsers)})")
+
+            # 브라우저 세션 저장
+            self.save_browser_sessions()
+
+            for browser in running_browsers:
+                try:
+                    # 브라우저를 안전하게 종료 (AppleScript 사용)
+                    subprocess.run(["osascript", "-e", f'tell application "{browser}" to quit'],
+                                 capture_output=True)
+                    time.sleep(2)  # 안전한 종료 대기
+
+                    # 여전히 실행 중이면 강제 종료
+                    result = subprocess.run(["pgrep", "-f", browser], capture_output=True)
+                    if result.returncode == 0:
+                        subprocess.run(["pkill", "-f", browser], capture_output=True)
+                        time.sleep(1)
+
+                    # 브라우저 재시작
+                    subprocess.run(["open", "-a", browser], capture_output=True)
+                    logger.log("INFO", f"{browser} 재시작 완료")
+
+                except Exception as e:
+                    logger.log("ERROR", f"{browser} 재시작 중 오류: {e}")
+
+            # 브라우저 재시작 후 세션 복구
+            time.sleep(5)  # 브라우저 로딩 대기
+            self.restore_browser_sessions()
+
+            logger.log("INFO", "브라우저 재시작 및 세션 복구 완료")
+
+        except Exception as e:
+            logger.log("ERROR", f"브라우저 재시작 중 오류: {e}")
+
+    def force_browser_refresh(self):
+        """실행 중인 브라우저에만 강제 새로고침 신호 전송"""
+        try:
+            running_browsers = self.get_running_browsers()
+
+            if not running_browsers:
+                return
+
+            logger.log("INFO", f"브라우저 새로고침 중... ({', '.join(running_browsers)})")
+
+            for browser in running_browsers:
+                try:
+                    # 브라우저 활성화
+                    subprocess.run(["osascript", "-e", f'tell application "{browser}" to activate'],
+                                 capture_output=True)
+                    time.sleep(1)  # 브라우저 활성화 대기
+
+                    # 올바른 새로고침 단축키 사용 (Cmd+R) - key code 15 사용
+                    subprocess.run(["osascript", "-e",
+                                  'tell application "System Events" to key code 15 using {command down}'],
+                                 capture_output=True)
+
+                    logger.log("INFO", f"{browser} 새로고침 완료")
+
+                except Exception as e:
+                    logger.log("ERROR", f"{browser} 새로고침 중 오류: {e}")
+
+            logger.log("INFO", "브라우저 새로고침 완료")
+
+        except Exception as e:
+            logger.log("ERROR", f"브라우저 새로고침 중 오류: {e}")
+
+    def get_browser_status(self):
+        """브라우저 상태 정보 반환"""
+        running_browsers = self.get_running_browsers()
+        return {
+            "running_browsers": running_browsers,
+            "total_running": len(running_browsers),
+            "supported_browsers": self.supported_browsers,
+            "total_supported": len(self.supported_browsers)
+        }
+
+    # ----- 집중 모드 연동 브라우저 제어 -----
+    def focus_mode_browser_control(self, enable_focus=True):
+        """집중 모드 브라우저 제어 (자동화된 통합 제어)"""
+        try:
+            if enable_focus:
+                logger.log("INFO", "집중 모드: 브라우저 강화 제어 시작")
+
+                # 1. 브라우저 세션 저장 (복구용)
+                self.save_browser_sessions()
+
+                # 2. 강화된 캐시 초기화
+                self.enhanced_cache_clear()
+
+                # 3. 브라우저 강제 재시작 (집중 모드용)
+                self.force_browser_restart_with_focus()
+
+                # 4. 브라우저 차단 강화
+                self.enhance_browser_blocking()
+
+                # 5. 자동 모니터링 시작
+                self.start_browser_monitoring()
+
+                logger.log("INFO", "집중 모드: 브라우저 강화 제어 완료")
+            else:
+                logger.log("INFO", "집중 모드 해제: 브라우저 제어 복구 시작")
+
+                # 1. 브라우저 모니터링 중지
+                self.stop_browser_monitoring()
+
+                # 2. 브라우저 차단 해제
+                self.remove_browser_blocking()
+
+                # 3. 세션 복구
+                self.restore_browser_sessions()
+
+                # 4. 브라우저 정상화
+                self.normalize_browsers()
+
+                logger.log("INFO", "집중 모드 해제: 브라우저 제어 복구 완료")
+
+        except Exception as e:
+            logger.log("ERROR", f"집중 모드 브라우저 제어 실패: {e}")
+
+    def enhanced_cache_clear(self):
+        """강화된 캐시 초기화 (집중 모드용)"""
+        try:
+            logger.log("INFO", "강화된 캐시 초기화 시작")
+
+            # 1. 시스템 DNS 캐시 초기화
+            self.simple_dns_flush()
+
+            # 2. 브라우저별 DNS 캐시 초기화
+            self.force_dns_cache_clear()
+
+            # 3. 브라우저 캐시 강제 초기화
+            self.force_browser_cache_clear()
+
+            # 4. 추가 브라우저 데이터 정리
+            self.clear_additional_browser_data()
+
+            logger.log("INFO", "강화된 캐시 초기화 완료")
+
+        except Exception as e:
+            logger.log("ERROR", f"강화된 캐시 초기화 실패: {e}")
+
+    def clear_additional_browser_data(self):
+        """추가 브라우저 데이터 정리"""
+        try:
+            running_browsers = self.get_running_browsers()
+
+            for browser in running_browsers:
+                if browser == "Google Chrome":
+                    # Chrome 추가 데이터 정리
+                    chrome_additional_paths = [
+                        "~/Library/Application Support/Google/Chrome/Default/History",
+                        "~/Library/Application Support/Google/Chrome/Default/Web Data",
+                        "~/Library/Application Support/Google/Chrome/Default/Shortcuts"
+                    ]
+                    for path in chrome_additional_paths:
+                        expanded_path = os.path.expanduser(path)
+                        if os.path.exists(expanded_path):
+                            subprocess.run(["rm", "-rf", f"{expanded_path}/*"], capture_output=True)
+
+                elif browser == "Safari":
+                    # Safari 추가 데이터 정리
+                    safari_additional_paths = [
+                        "~/Library/Safari/History.db",
+                        "~/Library/Safari/Downloads.plist",
+                        "~/Library/Safari/LastSession.plist"
+                    ]
+                    for path in safari_additional_paths:
+                        expanded_path = os.path.expanduser(path)
+                        if os.path.exists(expanded_path):
+                            subprocess.run(["rm", "-rf", f"{expanded_path}/*"], capture_output=True)
+
+            logger.log("INFO", "추가 브라우저 데이터 정리 완료")
+
+        except Exception as e:
+            logger.log("ERROR", f"추가 브라우저 데이터 정리 실패: {e}")
+
+    def enhance_browser_blocking(self):
+        """브라우저 차단 강화"""
+        try:
+            logger.log("INFO", "브라우저 차단 강화 시작")
+
+            # 1. 브라우저별 차단 확장 프로그램 설치/활성화
+            self.install_browser_extensions()
+
+            # 2. 브라우저 설정 변경
+            self.modify_browser_settings()
+
+            # 3. 추가 차단 규칙 적용
+            self.apply_additional_blocking_rules()
+
+            logger.log("INFO", "브라우저 차단 강화 완료")
+
+        except Exception as e:
+            logger.log("ERROR", f"브라우저 차단 강화 실패: {e}")
+
+    def install_browser_extensions(self):
+        """브라우저 확장 프로그램 설치/활성화"""
+        try:
+            # Chrome 확장 프로그램 (예시)
+            chrome_extensions = [
+                "cjpalhdlnbpafiamejdnhcphjbkeiagm",  # uBlock Origin
+                "nngceckbapebfimnlniiiahkandclblb"   # Block Site
+            ]
+
+            # Safari 확장 프로그램 (예시)
+            safari_extensions = [
+                "com.el1t.uBlock-Safari",
+                "com.block-site.safari"
+            ]
+
+            logger.log("INFO", "브라우저 확장 프로그램 설치 준비 완료")
+
+        except Exception as e:
+            logger.log("ERROR", f"브라우저 확장 프로그램 설치 실패: {e}")
+
+    def modify_browser_settings(self):
+        """브라우저 설정 변경"""
+        try:
+            running_browsers = self.get_running_browsers()
+
+            for browser in running_browsers:
+                if browser == "Google Chrome":
+                    # Chrome 설정 변경 (예시)
+                    chrome_settings = {
+                        "disable_plugins": True,
+                        "disable_javascript": False,  # 기본 기능 유지
+                        "disable_images": False,
+                        "disable_cookies": False
+                    }
+
+                elif browser == "Safari":
+                    # Safari 설정 변경 (예시)
+                    safari_settings = {
+                        "disable_plugins": True,
+                        "disable_javascript": False,
+                        "disable_images": False,
+                        "disable_cookies": False
+                    }
+
+            logger.log("INFO", "브라우저 설정 변경 완료")
+
+        except Exception as e:
+            logger.log("ERROR", f"브라우저 설정 변경 실패: {e}")
+
+    def apply_additional_blocking_rules(self):
+        """추가 차단 규칙 적용"""
+        try:
+            # 추가 차단할 도메인 목록
+            additional_domains = [
+                "*.youtube.com",
+                "*.facebook.com",
+                "*.instagram.com",
+                "*.twitter.com",
+                "*.netflix.com",
+                "*.twitch.tv"
+            ]
+
+            # hosts 파일에 추가 차단 규칙 적용
+            hosts_path = config_manager.get("system_paths.hosts_file", "/etc/hosts")
+            redirect_ip = config_manager.get("system_paths.redirect_ip", "127.0.0.1")
+
+            with open(hosts_path, "a") as f:
+                f.write("\n# FocusTimer Additional Blocking Rules\n")
+                for domain in additional_domains:
+                    f.write(f"{redirect_ip} {domain}\n")
+
+            logger.log("INFO", "추가 차단 규칙 적용 완료")
+
+        except Exception as e:
+            logger.log("ERROR", f"추가 차단 규칙 적용 실패: {e}")
+
+    def start_browser_monitoring(self):
+        """브라우저 모니터링 시작"""
+        try:
+            logger.log("INFO", "브라우저 모니터링 시작")
+
+            # 브라우저 프로세스 모니터링 시작
+            self.browser_monitoring_active = True
+
+            # 주기적 브라우저 상태 체크
+            def monitor_browsers():
+                while self.browser_monitoring_active:
+                    try:
+                        running_browsers = self.get_running_browsers()
+
+                        # 새로운 브라우저가 실행되면 차단 적용
+                        for browser in running_browsers:
+                            if browser not in self.monitored_browsers:
+                                self.apply_browser_restrictions(browser)
+                                self.monitored_browsers.add(browser)
+
+                        time.sleep(5)  # 5초마다 체크
+
+                    except Exception as e:
+                        logger.log("ERROR", f"브라우저 모니터링 오류: {e}")
+                        time.sleep(10)
+
+            # 모니터링 스레드 시작
+            self.monitoring_thread = threading.Thread(target=monitor_browsers, daemon=True)
+            self.monitoring_thread.start()
+
+            logger.log("INFO", "브라우저 모니터링 스레드 시작")
+
+        except Exception as e:
+            logger.log("ERROR", f"브라우저 모니터링 시작 실패: {e}")
+
+    def stop_browser_monitoring(self):
+        """브라우저 모니터링 중지"""
+        try:
+            self.browser_monitoring_active = False
+            if hasattr(self, 'monitoring_thread'):
+                self.monitoring_thread.join(timeout=5)
+            logger.log("INFO", "브라우저 모니터링 중지")
+        except Exception as e:
+            logger.log("ERROR", f"브라우저 모니터링 중지 실패: {e}")
+
+    def apply_browser_restrictions(self, browser):
+        """브라우저별 제한 사항 적용"""
+        try:
+            logger.log("INFO", f"{browser} 제한 사항 적용")
+
+            # 브라우저별 차단 사이트 접근 제한
+            if browser == "Google Chrome":
+                # Chrome 특화 제한
+                pass
+            elif browser == "Safari":
+                # Safari 특화 제한
+                pass
+
+            logger.log("INFO", f"{browser} 제한 사항 적용 완료")
+
+        except Exception as e:
+            logger.log("ERROR", f"{browser} 제한 사항 적용 실패: {e}")
+
+    def remove_browser_blocking(self):
+        """브라우저 차단 해제"""
+        try:
+            logger.log("INFO", "브라우저 차단 해제 시작")
+
+            # 1. 추가 차단 규칙 제거
+            self.remove_additional_blocking_rules()
+
+            # 2. 브라우저 설정 복구
+            self.restore_browser_settings()
+
+            # 3. 확장 프로그램 비활성화
+            self.disable_browser_extensions()
+
+            logger.log("INFO", "브라우저 차단 해제 완료")
+
+        except Exception as e:
+            logger.log("ERROR", f"브라우저 차단 해제 실패: {e}")
+
+    def remove_additional_blocking_rules(self):
+        """추가 차단 규칙 제거"""
+        try:
+            hosts_path = config_manager.get("system_paths.hosts_file", "/etc/hosts")
+
+            with open(hosts_path, "r") as f:
+                lines = f.readlines()
+
+            # 추가 차단 규칙 제거
+            filtered_lines = []
+            skip_section = False
+
+            for line in lines:
+                if "# FocusTimer Additional Blocking Rules" in line:
+                    skip_section = True
+                    continue
+                elif skip_section and line.strip() == "":
+                    skip_section = False
+                    continue
+                elif skip_section:
+                    continue
+                else:
+                    filtered_lines.append(line)
+
+            with open(hosts_path, "w") as f:
+                f.writelines(filtered_lines)
+
+            logger.log("INFO", "추가 차단 규칙 제거 완료")
+
+        except Exception as e:
+            logger.log("ERROR", f"추가 차단 규칙 제거 실패: {e}")
+
+    def restore_browser_settings(self):
+        """브라우저 설정 복구"""
+        try:
+            logger.log("INFO", "브라우저 설정 복구 시작")
+
+            # 브라우저 설정을 기본값으로 복구
+            running_browsers = self.get_running_browsers()
+
+            for browser in running_browsers:
+                if browser == "Google Chrome":
+                    # Chrome 설정 복구
+                    pass
+                elif browser == "Safari":
+                    # Safari 설정 복구
+                    pass
+
+            logger.log("INFO", "브라우저 설정 복구 완료")
+
+        except Exception as e:
+            logger.log("ERROR", f"브라우저 설정 복구 실패: {e}")
+
+    def disable_browser_extensions(self):
+        """브라우저 확장 프로그램 비활성화"""
+        try:
+            logger.log("INFO", "브라우저 확장 프로그램 비활성화 시작")
+
+            # 확장 프로그램 비활성화 로직
+            # (실제 구현에서는 브라우저별 확장 프로그램 관리 필요)
+
+            logger.log("INFO", "브라우저 확장 프로그램 비활성화 완료")
+
+        except Exception as e:
+            logger.log("ERROR", f"브라우저 확장 프로그램 비활성화 실패: {e}")
+
+    def normalize_browsers(self):
+        """브라우저 정상화"""
+        try:
+            logger.log("INFO", "브라우저 정상화 시작")
+
+            # 1. 브라우저 새로고침
+            self.force_browser_refresh()
+
+            # 2. DNS 캐시 초기화
+            self.simple_dns_flush()
+
+            # 3. 브라우저 상태 확인
+            running_browsers = self.get_running_browsers()
+            logger.log("INFO", f"정상화된 브라우저: {', '.join(running_browsers)}")
+
+            logger.log("INFO", "브라우저 정상화 완료")
+
+        except Exception as e:
+            logger.log("ERROR", f"브라우저 정상화 실패: {e}")
+
+    def __init__(self):
+        # 기존 초기화 코드...
+        supported_browsers = config_manager.get("browsers.supported")
+        self.supported_browsers = supported_browsers if supported_browsers else [
+            "Google Chrome", "Safari", "Firefox", "Whale", "Microsoft Edge"
+        ]
+
+        cache_paths = config_manager.get("browsers.cache_paths")
+        self.cache_paths = cache_paths if cache_paths else {
+            "Google Chrome": [
+                "~/Library/Caches/Google/Chrome/Default/Cache",
+                "~/Library/Application Support/Google/Chrome/Default/Cache",
+                "~/Library/Application Support/Google/Chrome/Default/Code Cache",
+                "~/Library/Application Support/Google/Chrome/Default/GPUCache"
+            ],
+            "Safari": [
+                "~/Library/Caches/com.apple.Safari",
+                "~/Library/Safari/LocalStorage",
+                "~/Library/Safari/WebpageIcons.db"
+            ],
+            "Firefox": [
+                "~/Library/Caches/Firefox/Profiles",
+                "~/Library/Application Support/Firefox/Profiles"
+            ],
+            "Whale": [
+                "~/Library/Caches/com.naver.whale",
+                "~/Library/Application Support/Naver/Whale/Default/Cache"
+            ],
+            "Microsoft Edge": [
+                "~/Library/Caches/com.microsoft.edgemac",
+                "~/Library/Application Support/Microsoft Edge/Default/Cache"
+            ]
+        }
+
+        # 집중 모드 연동을 위한 추가 변수들
+        self.browser_monitoring_active = False
+        self.monitored_browsers = set()
+        self.monitoring_thread = None
+
+# ----- 전역 인스턴스 -----

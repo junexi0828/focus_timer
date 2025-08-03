@@ -1,0 +1,64 @@
+[
+  {
+    "challenge_id": "1bb3d0b4-41b3-44b0-887f-af0868c04515",
+    "name": "일일 알고리즘 챌린지",
+    "description": "오늘의 EASY 난이도 문제들을 해결해보세요!",
+    "challenge_type": "DAILY",
+    "target_difficulty": "EASY",
+    "target_problems": 2,
+    "time_limit_days": 1,
+    "start_date": "2025-08-03T20:48:57.312612",
+    "end_date": "2025-08-04T20:48:57.312613",
+    "problems": [
+      "easy_001",
+      "easy_002"
+    ],
+    "completed_problems": [
+      "easy_001"
+    ],
+    "status": "ACTIVE",
+    "reward_points": 100,
+    "bonus_conditions": {}
+  },
+  {
+    "challenge_id": "62469bc1-25d7-4978-b97a-7f9298ec1d70",
+    "name": "주간 알고리즘 챌린지",
+    "description": "이번 주 다양한 난이도의 문제들을 도전해보세요!",
+    "challenge_type": "WEEKLY",
+    "target_difficulty": "MEDIUM",
+    "target_problems": 5,
+    "time_limit_days": 7,
+    "start_date": "2025-08-03T20:48:57.397408",
+    "end_date": "2025-08-10T20:48:57.397409",
+    "problems": [
+      "easy_002",
+      "easy_001",
+      "medium_001",
+      "medium_002",
+      "hard_001"
+    ],
+    "completed_problems": [],
+    "status": "ACTIVE",
+    "reward_points": 500,
+    "bonus_conditions": {}
+  },
+  {
+    "challenge_id": "83de2200-7e26-4726-a7ee-058cd9c3797a",
+    "name": "문자열 알고리즘 마스터",
+    "description": "문자열 관련 알고리즘 문제들을 집중적으로 풀어보세요!",
+    "challenge_type": "CUSTOM",
+    "target_difficulty": "MEDIUM",
+    "target_problems": 5,
+    "time_limit_days": 14,
+    "start_date": "2025-08-03T20:48:57.397679",
+    "end_date": "2025-08-17T20:48:57.397681",
+    "problems": [
+      "medium_001",
+      "medium_002"
+    ],
+    "completed_problems": [],
+    "status": "ACTIVE",
+    "reward_points": 250,
+    "bonus_conditions": {}
+  }
+]

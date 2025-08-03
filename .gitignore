@@ -45,13 +45,13 @@ wheels/
 logs/
 
 # 설정 파일 (민감한 정보 포함 가능)
-config.json
-*.config
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+#config.json
+#*.config
+#.env
+#.env.local
+#.env.development.local
+#.env.test.local
+#.env.production.local
 
 # 백업 파일
 *.backup
