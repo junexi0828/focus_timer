@@ -799,21 +799,32 @@ validate_source_files() {
         "FocusTimer.app/Contents/Resources/import_utils.py"
         "FocusTimer.app/Contents/Resources/integrated_focus_timer.py"
         "FocusTimer.icns"
-        "FocusTimer.iconset"
     )
 
+    # 파일 검증
     for file in "${required_files[@]}"; do
         if [[ ! -f "$file" ]]; then
             missing_files+=("$file")
         fi
     done
 
+    # 디렉토리 검증 (선택사항)
+    local optional_dirs=(
+        "FocusTimer.iconset"
+    )
+
+    for dir in "${optional_dirs[@]}"; do
+        if [[ ! -d "$dir" ]]; then
+            log_warn "선택적 디렉토리가 없습니다: $dir (개발용 원본 파일)"
+        fi
+    done
+
     if [[ ${#missing_files[@]} -gt 0 ]]; then
-        log_error "다음 필수 파일들이 누락되었습니다:"
+        log_error "다음 필수 파일/디렉토리들이 누락되었습니다:"
         for file in "${missing_files[@]}"; do
             echo "  - $file"
         done
-        log_error "모든 필수 파일이 있는지 확인하고 다시 실행해주세요."
+        log_error "모든 필수 파일/디렉토리가 있는지 확인하고 다시 실행해주세요."
         exit 1
     fi
 
