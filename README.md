@@ -1,19 +1,20 @@
-# Focus Timer - 집중 모드 시스템
-
 <div align="center">
+
+# Focus Timer - 집중 모드 시스템
 
 ![Focus Timer Logo](https://img.shields.io/badge/Focus%20Timer-Enterprise-blue?style=for-the-badge&logo=python)
 ![Python](https://img.shields.io/badge/Python-3.13+-green?style=for-the-badge&logo=python)
 ![macOS](https://img.shields.io/badge/macOS-Supported-orange?style=for-the-badge&logo=apple)
 ![License](https://img.shields.io/badge/License-Commercial-red?style=for-the-badge)
-![Downloads](https://img.shields.io/badge/Downloads-1K+-brightgreen?style=for-the-badge)
-![Version](https://img.shields.io/badge/Version-2.0-blue?style=for-the-badge)
 
 **생산성 향상을 위한 강력한 집중 모드 시스템**
 
 > **YouTube 차단부터 알고리즘 문제 기반 종료 방지까지, 완벽한 집중 환경을 제공합니다**
 
 **[English Version](README_EN.md)**
+
+![Downloads](https://img.shields.io/badge/Downloads-1K+-brightgreen?style=for-the-badge)
+![Version](https://img.shields.io/badge/Version-2.0-blue?style=for-the-badge)
 
 </div>
 
@@ -146,6 +147,7 @@ FocusTimer.app/
 **[📖 macOS App 상세 문서 →](FocusTimer.app/README.md)**
 
 [![Download macOS App](https://img.shields.io/badge/Download%20macOS%20App-Now-blue?style=for-the-badge&logo=apple)](https://github.com/your-repo/focus-timer/releases)
+
 ---
 
 ## 💻 Enterprise CLI Edition
@@ -191,6 +193,7 @@ enterprise/
 
 **[📖 Enterprise CLI Edition 상세 문서 →](enterprise/README.md)**
 
+<div align="center">
 [![Get Enterprise CLI](https://img.shields.io/badge/Get%20Enterprise%20CLI-Contact%20Us-orange?style=for-the-badge&logo=building)](mailto:junexi0828@gmail.com)
 ---
 
@@ -234,12 +237,12 @@ enterprise_gui/
 ```
 
 **[📖 Enterprise GUI Edition 상세 문서 →](enterprise_gui/README.md)**
+<div align="center">
+[![Get Enterprise GUI](https://img.shields.io/badge/Get%20Enterprise%20GUI-Contact%20Us-purple?style=for-the-badge&logo=building)](mailto:junexi0828@gmail.com)
 
 ---
 
 ## 🌐 Enterprise Web Edition
-
-[![Get Enterprise GUI](https://img.shields.io/badge/Get%20Enterprise%20GUI-Contact%20Us-purple?style=for-the-badge&logo=building)](mailto:junexi0828@gmail.com)
 
 
 <div align="center">
@@ -329,6 +332,7 @@ config/
 **[📖 설정 관리 시스템 상세 문서 →](config/README.md)**
 
 [![Try Config Manager](https://img.shields.io/badge/Try%20Config%20Manager-Now-lightblue?style=for-the-badge&logo=settings)](https://github.com/your-repo/focus-timer#-설정-관리-시스템)
+
 ---
 
 ## 🧮 알고리즘 시스템 (Phase 4)
@@ -434,13 +438,11 @@ installers/
 ---
 
 ## 📊 기능 비교표
-</div>
 
 <div align="center">
 
 [![Compare All Features](https://img.shields.io/badge/Compare%20All%20Features-Detailed%20Analysis-blue?style=for-the-badge&logo=chart)](https://github.com/your-repo/focus-timer#-기능-비교표)
 
-<div align="center">
 
 | 기능 | Personal | macOS App | Enterprise CLI | Enterprise GUI | Enterprise Web |
 |------|----------|-----------|----------------|----------------|----------------|
@@ -463,7 +465,7 @@ installers/
 </div>
 
 ---
-
+</div>
 ## 🎯 사용 시나리오
 
 ### 👤 개인 사용자
@@ -508,6 +510,8 @@ installers/
 [![Contact Support](https://img.shields.io/badge/Contact%20Support-Email%20Us-green?style=for-the-badge&logo=mail)](mailto:junexi0828@gmail.com)
 [![Visit Blog](https://img.shields.io/badge/Visit%20Blog-Velog-blue?style=for-the-badge&logo=blog)](https://velog.io/@junexi0828/posts)
 
+
+
 </div>
 
 ### 📧 연락처
@@ -515,8 +519,6 @@ installers/
 - **이메일**: junexi0828@gmail.com
 - **블로그**: [https://velog.io/@junexi0828/posts](https://velog.io/@junexi0828/posts)
 - **GitHub**: [Focus Timer Repository](https://github.com/your-repo/focus-timer)
-
-</div>
 
 ### 📚 문서
 - **[Personal Edition](personal/README.md)** - 개인용 상세 문서
