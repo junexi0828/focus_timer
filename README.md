@@ -1,13 +1,13 @@
+<div align="center">
 # Focus Timer - 집중 모드 시스템
 
-<div align="center">
-
-![Downloads](https://img.shields.io/badge/Downloads-1K+-brightgreen?style=for-the-badge)
-![Version](https://img.shields.io/badge/Version-2.0-blue?style=for-the-badge)
 ![Focus Timer Logo](https://img.shields.io/badge/Focus%20Timer-Enterprise-blue?style=for-the-badge&logo=python)
 ![Python](https://img.shields.io/badge/Python-3.13+-green?style=for-the-badge&logo=python)
 ![macOS](https://img.shields.io/badge/macOS-Supported-orange?style=for-the-badge&logo=apple)
 ![License](https://img.shields.io/badge/License-Commercial-red?style=for-the-badge)
+![Downloads](https://img.shields.io/badge/Downloads-1K+-brightgreen?style=for-the-badge)
+![Version](https://img.shields.io/badge/Version-2.0-blue?style=for-the-badge)
+
 
 **생산성 향상을 위한 강력한 집중 모드 시스템**
 
@@ -74,10 +74,9 @@ personal/
 └── README.md                   # 상세 문서
 ```
 
-<div align="center">
-
 **[📖 Personal Edition 상세 문서 →](personal/README.md)**
 
+<div align="center">
 [![Try Personal Edition](https://img.shields.io/badge/Try%20Personal%20Edition-Now-green?style=for-the-badge&logo=rocket)](https://github.com/your-repo/focus-timer#personal-edition)
 
 </div>
@@ -147,10 +146,9 @@ FocusTimer.app/
 ```
 
 
-<div align="center">
-
 **[📖 macOS App 상세 문서 →](FocusTimer.app/README.md)**
 
+<div align="center">
 [![Download macOS App](https://img.shields.io/badge/Download%20macOS%20App-Now-blue?style=for-the-badge&logo=apple)](https://github.com/your-repo/focus-timer/releases)
 
 </div>
@@ -198,10 +196,9 @@ enterprise/
 └── README.md                  # 상세 문서
 ```
 
-<div align="center">
-
 **[📖 Enterprise CLI Edition 상세 문서 →](enterprise/README.md)**
 
+<div align="center">
 [![Get Enterprise CLI](https://img.shields.io/badge/Get%20Enterprise%20CLI-Contact%20Us-orange?style=for-the-badge&logo=building)](mailto:junexi0828@gmail.com)
 
 </div>
@@ -250,7 +247,7 @@ enterprise_gui/
 **[📖 Enterprise GUI Edition 상세 문서 →](enterprise_gui/README.md)**
 
 <div align="center">
-[![Get Enterprise GUI](https://img.shields.io/badge/Get%20Enterprise%20GUI-Contact%20Us-purple?style=for-the-badge&logo=building)](mailto:junexi0828@gmail.com)
+[![Get Enterprise GUI](https://img.shields.io/badge/Get%20Enterprise%20GUI-Contact%20Us-purple?style=for-the-badge&logo=building)]
 
 </div>
 
@@ -298,9 +295,7 @@ enterprise_web/
 **[📖 Enterprise Web Edition 상세 문서 →](enterprise_web/README.md)**
 
 <div align="center">
-[![Get Enterprise Web](https://img.shields.io/badge/Get%20Enterprise%20Web-Contact%20Us-red?style=for-the-badge&logo=building)](mailto:junexi0828@gmail.com)
-
-</div>
+[![Get Enterprise Web](https://img.shields.io/badge/Get%20Enterprise%20Web-Contact%20Us-red?style=for-the-badge&logo=building)]
 
 </div>
 
@@ -348,10 +343,9 @@ config/
 └── README.md          # 상세 문서
 ```
 
-<div align="center">
-
 **[📖 설정 관리 시스템 상세 문서 →](config/README.md)**
 
+<div align="center">
 [![Try Config Manager](https://img.shields.io/badge/Try%20Config%20Manager-Now-lightblue?style=for-the-badge&logo=settings)](https://github.com/your-repo/focus-timer#-설정-관리-시스템)
 
 </div>
@@ -404,10 +398,9 @@ python3 example_problems.py
 python3 remote_provider_example.py
 ```
 
-<div align="center">
-
 **[📖 알고리즘 시스템 상세 문서 →](algorithm_system/README.md)**
 
+<div align="center">
 [![Explore Algorithm System](https://img.shields.io/badge/Explore%20Algorithm%20System-Now-yellow?style=for-the-badge&logo=code)](https://github.com/your-repo/focus-timer#-알고리즘-시스템-phase-4)
 
 </div>
@@ -492,7 +485,7 @@ installers/
 </div>
 
 ---
-</div>
+
 ## 🎯 사용 시나리오
 
 ### 👤 개인 사용자
@@ -533,7 +526,6 @@ installers/
 
 ![Support](https://img.shields.io/badge/Support-Available-green?style=for-the-badge)
 ![Response Time](https://img.shields.io/badge/Response%20Time-24h-green?style=for-the-badge)
-
 [![Contact Support](https://img.shields.io/badge/Contact%20Support-Email%20Us-green?style=for-the-badge&logo=mail)](mailto:junexi0828@gmail.com)
 [![Visit Blog](https://img.shields.io/badge/Visit%20Blog-Velog-blue?style=for-the-badge&logo=blog)](https://velog.io/@junexi0828/posts)
 
