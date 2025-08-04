@@ -1,5 +1,6 @@
-<div align="center">
 # Focus Timer - 집중 모드 시스템
+
+<div align="center">
 
 ![Focus Timer Logo](https://img.shields.io/badge/Focus%20Timer-Enterprise-blue?style=for-the-badge&logo=python)
 ![Python](https://img.shields.io/badge/Python-3.13+-green?style=for-the-badge&logo=python)
@@ -247,7 +248,7 @@ enterprise_gui/
 **[📖 Enterprise GUI Edition 상세 문서 →](enterprise_gui/README.md)**
 
 <div align="center">
-[![Get Enterprise GUI](https://img.shields.io/badge/Get%20Enterprise%20GUI-Contact%20Us-purple?style=for-the-badge&logo=building)]
+[![Get Enterprise GUI](https://img.shields.io/badge/Get%20Enterprise%20GUI-Contact%20Us-purple?style=for-the-badge&logo=building)](mailto:junexi0828@gmail.com)
 
 </div>
 
@@ -295,7 +296,7 @@ enterprise_web/
 **[📖 Enterprise Web Edition 상세 문서 →](enterprise_web/README.md)**
 
 <div align="center">
-[![Get Enterprise Web](https://img.shields.io/badge/Get%20Enterprise%20Web-Contact%20Us-red?style=for-the-badge&logo=building)]
+[![Get Enterprise Web](https://img.shields.io/badge/Get%20Enterprise%20Web-Contact%20Us-red?style=for-the-badge&logo=building)](mailto:junexi0828@gmail.com)
 
 </div>
 
@@ -526,10 +527,9 @@ installers/
 
 ![Support](https://img.shields.io/badge/Support-Available-green?style=for-the-badge)
 ![Response Time](https://img.shields.io/badge/Response%20Time-24h-green?style=for-the-badge)
+
 [![Contact Support](https://img.shields.io/badge/Contact%20Support-Email%20Us-green?style=for-the-badge&logo=mail)](mailto:junexi0828@gmail.com)
 [![Visit Blog](https://img.shields.io/badge/Visit%20Blog-Velog-blue?style=for-the-badge&logo=blog)](https://velog.io/@junexi0828/posts)
-
-
 
 </div>
 
