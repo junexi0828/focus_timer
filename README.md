@@ -77,10 +77,11 @@ personal/
 
 **[📖 Personal Edition 상세 문서 →](personal/README.md)**
 
-<div align="center">
-[![Try Personal Edition](https://img.shields.io/badge/Try%20Personal%20Edition-Now-green?style=for-the-badge&logo=rocket)](https://github.com/junexi0828/focus_timer#personal-edition)
-
-</div>
+<p align="center">
+<a href="https://github.com/junexi0828/focus_timer#personal-edition">
+<img src="https://img.shields.io/badge/Try%20Personal%20Edition-Now-green?style=for-the-badge&logo=rocket" alt="Try Personal Edition">
+</a>
+</p>
 
 ---
 
@@ -149,10 +150,11 @@ FocusTimer.app/
 
 **[📖 macOS App 상세 문서 →](FocusTimer.app/README.md)**
 
-<div align="center">
-[![Download macOS App](https://img.shields.io/badge/Download%20macOS%20App-Now-blue?style=for-the-badge&logo=apple)](https://github.com/junexi0828/focus_timer/releases)
-
-</div>
+<p align="center">
+<a href="https://github.com/junexi0828/focus_timer/releases">
+<img src="https://img.shields.io/badge/Download%20macOS%20App-Now-blue?style=for-the-badge&logo=apple" alt="Download macOS App">
+</a>
+</p>
 
 ---
 
@@ -199,10 +201,11 @@ enterprise/
 
 **[📖 Enterprise CLI Edition 상세 문서 →](enterprise/README.md)**
 
-<div align="center">
-[![Get Enterprise CLI](https://img.shields.io/badge/Get%20Enterprise%20CLI-Contact%20Us-orange?style=for-the-badge&logo=building)](mailto:junexi0828@gmail.com)
-
-</div>
+<p align="center">
+<a href="mailto:junexi0828@gmail.com">
+<img src="https://img.shields.io/badge/Get%20Enterprise%20CLI-Contact%20Us-orange?style=for-the-badge&logo=building" alt="Get Enterprise CLI">
+</a>
+</p>
 
 ---
 
@@ -247,10 +250,11 @@ enterprise_gui/
 
 **[📖 Enterprise GUI Edition 상세 문서 →](enterprise_gui/README.md)**
 
-<div align="center">
-[![Get Enterprise GUI](https://img.shields.io/badge/Get%20Enterprise%20GUI-Contact%20Us-purple?style=for-the-badge&logo=building)](mailto:junexi0828@gmail.com)
-
-</div>
+<p align="center">
+<a href="mailto:junexi0828@gmail.com">
+<img src="https://img.shields.io/badge/Get%20Enterprise%20GUI-Contact%20Us-purple?style=for-the-badge&logo=building" alt="Get Enterprise GUI">
+</a>
+</p>
 
 ---
 
@@ -295,10 +299,11 @@ enterprise_web/
 
 **[📖 Enterprise Web Edition 상세 문서 →](enterprise_web/README.md)**
 
-<div align="center">
-[![Get Enterprise Web](https://img.shields.io/badge/Get%20Enterprise%20Web-Contact%20Us-red?style=for-the-badge&logo=building)](mailto:junexi0828@gmail.com)
-
-</div>
+<p align="center">
+<a href="mailto:junexi0828@gmail.com">
+<img src="https://img.shields.io/badge/Get%20Enterprise%20Web-Contact%20Us-red?style=for-the-badge&logo=building" alt="Get Enterprise Web">
+</a>
+</p>
 
 ---
 
@@ -346,10 +351,11 @@ config/
 
 **[📖 설정 관리 시스템 상세 문서 →](config/README.md)**
 
-<div align="center">
-[![Try Config Manager](https://img.shields.io/badge/Try%20Config%20Manager-Now-lightblue?style=for-the-badge&logo=settings)](https://github.com/junexi0828/focus_timer#-설정-관리-시스템)
-
-</div>
+<p align="center">
+<a href="https://github.com/junexi0828/focus_timer#-설정-관리-시스템">
+<img src="https://img.shields.io/badge/Try%20Config%20Manager-Now-lightblue?style=for-the-badge&logo=settings" alt="Try Config Manager">
+</a>
+</p>
 
 ---
 
@@ -401,10 +407,11 @@ python3 remote_provider_example.py
 
 **[📖 알고리즘 시스템 상세 문서 →](algorithm_system/README.md)**
 
-<div align="center">
-[![Explore Algorithm System](https://img.shields.io/badge/Explore%20Algorithm%20System-Now-yellow?style=for-the-badge&logo=code)](https://github.com/junexi0828/focus_timer#-알고리즘-시스템-phase-4)
-
-</div>
+<p align="center">
+<a href="https://github.com/junexi0828/focus_timer#-알고리즘-시스템-phase-4">
+<img src="https://img.shields.io/badge/Explore%20Algorithm%20System-Now-yellow?style=for-the-badge&logo=code" alt="Explore Algorithm System">
+</a>
+</p>
 
 ---
 
@@ -460,11 +467,11 @@ installers/
 
 ## 📊 기능 비교표
 
-<div align="center">
-
-[![Compare All Features](https://img.shields.io/badge/Compare%20All%20Features-Detailed%20Analysis-blue?style=for-the-badge&logo=chart)](https://github.com/junexi0828/focus_timer#-기능-비교표)
-
-
+<p align="center">
+<a href="https://github.com/junexi0828/focus_timer#-기능-비교표">
+<img src="https://img.shields.io/badge/Compare%20All%20Features-Detailed%20Analysis-blue?style=for-the-badge&logo=chart" alt="Compare All Features">
+</a>
+</p>
 | 기능 | Personal | macOS App | Enterprise CLI | Enterprise GUI | Enterprise Web |
 |------|----------|-----------|----------------|----------------|----------------|
 | **기본 차단** | ✅ | ✅ | ✅ | ✅ | ✅ |
