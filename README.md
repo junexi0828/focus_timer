@@ -78,7 +78,7 @@ personal/
 **[📖 Personal Edition 상세 문서 →](personal/README.md)**
 
 <div align="center">
-[![Try Personal Edition](https://img.shields.io/badge/Try%20Personal%20Edition-Now-green?style=for-the-badge&logo=rocket)](https://github.com/your-repo/focus-timer#personal-edition)
+[![Try Personal Edition](https://img.shields.io/badge/Try%20Personal%20Edition-Now-green?style=for-the-badge&logo=rocket)](https://github.com/junexi0828/focus_timer#personal-edition)
 
 </div>
 
@@ -150,7 +150,7 @@ FocusTimer.app/
 **[📖 macOS App 상세 문서 →](FocusTimer.app/README.md)**
 
 <div align="center">
-[![Download macOS App](https://img.shields.io/badge/Download%20macOS%20App-Now-blue?style=for-the-badge&logo=apple)](https://github.com/your-repo/focus-timer/releases)
+[![Download macOS App](https://img.shields.io/badge/Download%20macOS%20App-Now-blue?style=for-the-badge&logo=apple)](https://github.com/junexi0828/focus_timer/releases)
 
 </div>
 
@@ -347,7 +347,7 @@ config/
 **[📖 설정 관리 시스템 상세 문서 →](config/README.md)**
 
 <div align="center">
-[![Try Config Manager](https://img.shields.io/badge/Try%20Config%20Manager-Now-lightblue?style=for-the-badge&logo=settings)](https://github.com/your-repo/focus-timer#-설정-관리-시스템)
+[![Try Config Manager](https://img.shields.io/badge/Try%20Config%20Manager-Now-lightblue?style=for-the-badge&logo=settings)](https://github.com/junexi0828/focus_timer#-설정-관리-시스템)
 
 </div>
 
@@ -402,7 +402,7 @@ python3 remote_provider_example.py
 **[📖 알고리즘 시스템 상세 문서 →](algorithm_system/README.md)**
 
 <div align="center">
-[![Explore Algorithm System](https://img.shields.io/badge/Explore%20Algorithm%20System-Now-yellow?style=for-the-badge&logo=code)](https://github.com/your-repo/focus-timer#-알고리즘-시스템-phase-4)
+[![Explore Algorithm System](https://img.shields.io/badge/Explore%20Algorithm%20System-Now-yellow?style=for-the-badge&logo=code)](https://github.com/junexi0828/focus_timer#-알고리즘-시스템-phase-4)
 
 </div>
 
@@ -462,7 +462,7 @@ installers/
 
 <div align="center">
 
-[![Compare All Features](https://img.shields.io/badge/Compare%20All%20Features-Detailed%20Analysis-blue?style=for-the-badge&logo=chart)](https://github.com/your-repo/focus-timer#-기능-비교표)
+[![Compare All Features](https://img.shields.io/badge/Compare%20All%20Features-Detailed%20Analysis-blue?style=for-the-badge&logo=chart)](https://github.com/junexi0828/focus_timer#-기능-비교표)
 
 
 | 기능 | Personal | macOS App | Enterprise CLI | Enterprise GUI | Enterprise Web |
@@ -537,7 +537,7 @@ installers/
 - **개발자**: juns
 - **이메일**: junexi0828@gmail.com
 - **블로그**: [https://velog.io/@junexi0828/posts](https://velog.io/@junexi0828/posts)
-- **GitHub**: [Focus Timer Repository](https://github.com/your-repo/focus-timer)
+- **GitHub**: [Focus Timer Repository](https://github.com/junexi0828/focus_timer)
 
 ### 📚 문서
 - **[Personal Edition](personal/README.md)** - 개인용 상세 문서
