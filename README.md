@@ -472,6 +472,7 @@ installers/
 <img src="https://img.shields.io/badge/Compare%20All%20Features-Detailed%20Analysis-blue?style=for-the-badge&logo=chart" alt="Compare All Features">
 </a>
 </p>
+
 | 기능 | Personal | macOS App | Enterprise CLI | Enterprise GUI | Enterprise Web |
 |------|----------|-----------|----------------|----------------|----------------|
 | **기본 차단** | ✅ | ✅ | ✅ | ✅ | ✅ |
@@ -489,7 +490,6 @@ installers/
 | **다중 사용자** | ❌ | ❌ | ❌ | ❌ | ❌ |
 | **가격** | **무료** | **$6/월** | **$4/월** | **$4/월** | **$7/월** |
 
-</div>
 
 ---
 
