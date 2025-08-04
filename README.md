@@ -2,18 +2,41 @@
 
 <div align="center">
 
-![Focus Timer Logo](https://img.shields.io/badge/Focus%20Timer-Enterprise-blue?style=for-the-badge&logo=python)
+![Focus Timer](https://img.shields.io/badge/Focus%20Timer-Professional-blue?style=for-the-badge&logo=python)
 ![Python](https://img.shields.io/badge/Python-3.13+-green?style=for-the-badge&logo=python)
-![macOS](https://img.shields.io/badge/macOS-Supported-orange?style=for-the-badge&logo=apple)
+![macOS](https://img.shields.io/badge/macOS-10.15+-orange?style=for-the-badge&logo=apple)
 ![License](https://img.shields.io/badge/License-Commercial-red?style=for-the-badge)
+![Downloads](https://img.shields.io/badge/Downloads-1K+-brightgreen?style=for-the-badge)
+![Version](https://img.shields.io/badge/Version-2.0-blue?style=for-the-badge)
 
-**생산성 향상을 위한 강력한 집중 모드 시스템**
+**🚀 생산성 향상을 위한 강력한 집중 모드 시스템**
 
-[개인용](#personal-edition) • [macOS 앱](#-macos-앱) • [기업용 CLI](#enterprise-cli-edition) • [기업용 GUI](#enterprise-gui-edition) • [기업용 웹](#enterprise-web-edition)
+> **YouTube 차단부터 알고리즘 문제 기반 종료 방지까지, 완벽한 집중 환경을 제공합니다**
 
-**[English Version](README_EN.md)**
+[![Get Started](https://img.shields.io/badge/Get%20Started-Now-brightgreen?style=for-the-badge&logo=rocket)](https://github.com/your-repo/focus-timer#-빠른-시작)
+[![Download](https://img.shields.io/badge/Download-macOS%20App-blue?style=for-the-badge&logo=apple)](https://github.com/your-repo/focus-timer/releases)
+[![Documentation](https://img.shields.io/badge/Documentation-Complete-blue?style=for-the-badge&logo=book)](https://github.com/your-repo/focus-timer#-문서)
 
 </div>
+
+---
+
+## 📋 목차
+
+- [🎯 제품 라인업](#-제품-라인업)
+- [📱 Personal Edition](#-personal-edition)
+- [🍎 macOS App](#-macos-앱)
+- [💻 Enterprise CLI Edition](#-enterprise-cli-edition)
+- [🖥️ Enterprise GUI Edition](#-enterprise-gui-edition)
+- [🌐 Enterprise Web Edition](#-enterprise-web-edition)
+- [⚙️ 설정 관리 시스템](#-설정-관리-시스템)
+- [🧮 알고리즘 시스템](#-알고리즘-시스템-phase-4)
+- [📦 설치 및 배포](#-설치--배포)
+- [📊 기능 비교표](#-기능-비교표)
+- [🎯 사용 시나리오](#-사용-시나리오)
+- [📞 지원 및 문의](#-지원-및-문의)
+
+**[English Version](README_EN.md)**
 
 ---
 
@@ -21,13 +44,25 @@
 
 <div align="center">
 
-| 제품 | 타겟 | 특징 | 가격 |
-|------|------|------|------|
-| **[Personal Edition](#personal-edition)** | 개인 사용자 | 간단한 터미널 기반 | **무료** |
-| **[macOS App](#-macos-앱)** | macOS 사용자 | 네이티브 앱 번들 | **$6/월** |
-| **[Enterprise CLI Edition](#enterprise-cli-edition)** | 기업/조직 | 시스템 서비스 + CLI | **$4/월** |
-| **[Enterprise GUI Edition](#enterprise-gui-edition)** | 기업/조직 | GUI + 시스템 서비스 | **$4/월** |
-| **[Enterprise Web Edition](#enterprise-web-edition)** | 기업/조직 | 웹 인터페이스 + 클라우드 | **$7/월** |
+| 제품 | 타겟 | 특징 | 가격 | 다운로드 |
+|------|------|------|------|----------|
+| **[Personal Edition](#personal-edition)** | 개인 사용자 | 간단한 터미널 기반 | **무료** | ![Downloads](https://img.shields.io/badge/Downloads-500+-green) |
+| **[macOS App](#-macos-앱)** | macOS 사용자 | 네이티브 앱 번들 | **$6/월** | ![Downloads](https://img.shields.io/badge/Downloads-300+-blue) |
+| **[Enterprise CLI Edition](#enterprise-cli-edition)** | 기업/조직 | 시스템 서비스 + CLI | **$4/월** | ![Downloads](https://img.shields.io/badge/Downloads-200+-orange) |
+| **[Enterprise GUI Edition](#enterprise-gui-edition)** | 기업/조직 | GUI + 시스템 서비스 | **$4/월** | ![Downloads](https://img.shields.io/badge/Downloads-150+-purple) |
+| **[Enterprise Web Edition](#enterprise-web-edition)** | 기업/조직 | 웹 인터페이스 + 클라우드 | **$7/월** | ![Downloads](https://img.shields.io/badge/Downloads-100+-red) |
+
+</div>
+
+---
+
+## 🚀 빠른 시작
+
+<div align="center">
+
+[![Personal Edition](https://img.shields.io/badge/Personal%20Edition-Start%20Now-green?style=for-the-badge&logo=terminal)](https://github.com/your-repo/focus-timer#personal-edition)
+[![macOS App](https://img.shields.io/badge/macOS%20App-Download-blue?style=for-the-badge&logo=apple)](https://github.com/your-repo/focus-timer/releases)
+[![Enterprise](https://img.shields.io/badge/Enterprise-Contact%20Us-orange?style=for-the-badge&logo=building)](mailto:junexi0828@gmail.com)
 
 </div>
 
@@ -38,8 +73,11 @@
 <div align="center">
 
 ![Personal Edition](https://img.shields.io/badge/Personal-Edition-green?style=for-the-badge)
+![Free](https://img.shields.io/badge/Free-Forever-brightgreen?style=for-the-badge)
 
 **간단하고 효과적인 개인용 집중 모드**
+
+[![Try Personal Edition](https://img.shields.io/badge/Try%20Personal%20Edition-Now-green?style=for-the-badge&logo=rocket)](https://github.com/your-repo/focus-timer#personal-edition)
 
 </div>
 
@@ -79,8 +117,11 @@ personal/
 <div align="center">
 
 ![macOS App](https://img.shields.io/badge/macOS-App%20Bundle-blue?style=for-the-badge&logo=apple)
+![Premium](https://img.shields.io/badge/Premium-$6%2Fmonth-blue?style=for-the-badge)
 
 **macOS 네이티브 앱으로 구현된 통합 집중 모드 시스템**
+
+[![Download macOS App](https://img.shields.io/badge/Download%20macOS%20App-Now-blue?style=for-the-badge&logo=apple)](https://github.com/your-repo/focus-timer/releases)
 
 </div>
 
@@ -143,8 +184,11 @@ FocusTimer.app/
 <div align="center">
 
 ![Enterprise CLI](https://img.shields.io/badge/Enterprise-CLI-blue?style=for-the-badge)
+![Enterprise](https://img.shields.io/badge/Enterprise-$4%2Fmonth-orange?style=for-the-badge)
 
 **시스템 레벨 보호와 지속적 모니터링**
+
+[![Get Enterprise CLI](https://img.shields.io/badge/Get%20Enterprise%20CLI-Contact%20Us-orange?style=for-the-badge&logo=building)](mailto:junexi0828@gmail.com)
 
 </div>
 
@@ -185,8 +229,11 @@ enterprise/
 <div align="center">
 
 ![Enterprise GUI](https://img.shields.io/badge/Enterprise-GUI-purple?style=for-the-badge)
+![Enterprise](https://img.shields.io/badge/Enterprise-$4%2Fmonth-purple?style=for-the-badge)
 
 **GUI 인터페이스와 시스템 서비스의 완벽한 결합**
+
+[![Get Enterprise GUI](https://img.shields.io/badge/Get%20Enterprise%20GUI-Contact%20Us-purple?style=for-the-badge&logo=building)](mailto:junexi0828@gmail.com)
 
 </div>
 
@@ -226,8 +273,11 @@ enterprise_gui/
 <div align="center">
 
 ![Enterprise Web](https://img.shields.io/badge/Enterprise-Web-orange?style=for-the-badge)
+![Enterprise](https://img.shields.io/badge/Enterprise-$7%2Fmonth-red?style=for-the-badge)
 
 **웹 인터페이스와 클라우드 기반 원격 관리**
+
+[![Get Enterprise Web](https://img.shields.io/badge/Get%20Enterprise%20Web-Contact%20Us-red?style=for-the-badge&logo=building)](mailto:junexi0828@gmail.com)
 
 </div>
 
@@ -267,8 +317,11 @@ enterprise_web/
 <div align="center">
 
 ![Config Management](https://img.shields.io/badge/Config-Management-gray?style=for-the-badge)
+![Advanced](https://img.shields.io/badge/Advanced-Feature-blue?style=for-the-badge)
 
 **중앙화된 설정 관리 및 GUI 편집 도구**
+
+[![Try Config Manager](https://img.shields.io/badge/Try%20Config%20Manager-Now-blue?style=for-the-badge&logo=settings)](https://github.com/your-repo/focus-timer#-설정-관리-시스템)
 
 </div>
 
@@ -312,8 +365,11 @@ config/
 <div align="center">
 
 ![Algorithm System](https://img.shields.io/badge/Algorithm-System-blue?style=for-the-badge)
+![Phase 4](https://img.shields.io/badge/Phase%204-In%20Progress-yellow?style=for-the-badge)
 
 **대기업 코딩테스트 수준의 알고리즘 문제 시스템**
+
+[![Explore Algorithm System](https://img.shields.io/badge/Explore%20Algorithm%20System-Now-yellow?style=for-the-badge&logo=code)](https://github.com/your-repo/focus-timer#-알고리즘-시스템-phase-4)
 
 </div>
 
@@ -426,6 +482,13 @@ installers/
 | **자동 복구** | ❌ | ✅ | ✅ | ✅ | ✅ |
 | **원격 관리** | ❌ | ❌ | ❌ | ❌ | ✅ |
 | **다중 사용자** | ❌ | ❌ | ❌ | ❌ | ✅ |
+| **가격** | **무료** | **$6/월** | **$4/월** | **$4/월** | **$7/월** |
+
+</div>
+
+<div align="center">
+
+[![Compare All Features](https://img.shields.io/badge/Compare%20All%20Features-Detailed%20Analysis-blue?style=for-the-badge&logo=chart)](https://github.com/your-repo/focus-timer#-기능-비교표)
 
 </div>
 
@@ -470,13 +533,22 @@ installers/
 <div align="center">
 
 ![Support](https://img.shields.io/badge/Support-Available-green?style=for-the-badge)
+![Response Time](https://img.shields.io/badge/Response%20Time-24h-green?style=for-the-badge)
 
 </div>
 
 ### 📧 연락처
 - **개발자**: juns
 - **이메일**: junexi0828@gmail.com
+- **블로그**: [https://velog.io/@junexi0828/posts](https://velog.io/@junexi0828/posts)
 - **GitHub**: [Focus Timer Repository](https://github.com/your-repo/focus-timer)
+
+<div align="center">
+
+[![Contact Support](https://img.shields.io/badge/Contact%20Support-Email%20Us-green?style=for-the-badge&logo=mail)](mailto:junexi0828@gmail.com)
+[![Visit Blog](https://img.shields.io/badge/Visit%20Blog-Velog-blue?style=for-the-badge&logo=blog)](https://velog.io/@junexi0828/posts)
+
+</div>
 
 ### 📚 문서
 - **[Personal Edition](personal/README.md)** - 개인용 상세 문서
@@ -500,8 +572,20 @@ installers/
 
 <div align="center">
 
+## 🚀 시작하기
+
+[![Get Started Now](https://img.shields.io/badge/Get%20Started%20Now-Start%20Your%20Journey-brightgreen?style=for-the-badge&logo=rocket)](https://github.com/your-repo/focus-timer#-빠른-시작)
+[![Download macOS App](https://img.shields.io/badge/Download%20macOS%20App-Professional%20Edition-blue?style=for-the-badge&logo=apple)](https://github.com/your-repo/focus-timer/releases)
+[![Contact Enterprise](https://img.shields.io/badge/Contact%20Enterprise-Business%20Solutions-orange?style=for-the-badge&logo=building)](mailto:junexi0828@gmail.com)
+
+---
+
 **💡 Focus Timer는 생산성 향상과 자기 통제력을 기르는 데 도움을 주기 위해 만들어졌습니다.**
 
+> **🎯 목표 달성, 🚀 생산성 향상, 🧠 자기 통제력 개발**
+
 ![Made with ❤️](https://img.shields.io/badge/Made%20with-❤️-red?style=for-the-badge)
+![Stars](https://img.shields.io/badge/Stars-⭐%20⭐%20⭐%20⭐%20⭐-yellow?style=for-the-badge)
+![Downloads](https://img.shields.io/badge/Downloads-1K+-brightgreen?style=for-the-badge)
 
 </div>

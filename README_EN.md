@@ -474,6 +474,7 @@ installers/
 ### 📧 Contact Information
 - **Developer**: juns
 - **Email**: junexi0828@gmail.com
+- **Blog**: [https://velog.io/@junexi0828/posts](https://velog.io/@junexi0828/posts)
 - **GitHub**: [Focus Timer Repository](https://github.com/your-repo/focus-timer)
 
 ### 📚 Documentation
