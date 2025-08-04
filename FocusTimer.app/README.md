@@ -26,6 +26,42 @@ FocusTimer.app은 macOS 네이티브 앱 번들(.app) 형태로 구현된 통합
 - 🔄 **백그라운드 서비스** - 지속적인 모니터링 및 보호
 - ⚙️ **중앙화된 설정 관리** - JSON 기반 설정 시스템
 - 🛡️ **시스템 레벨 보호** - hosts 파일 권한 관리
+- 🚀 **독립 실행 파일** - PyInstaller로 완전 독립적인 앱 번들
+- 🔄 **자동 재시작 시스템** - LaunchAgent 기반 백그라운드 서비스
+- 🖥️ **시스템 부팅 시 자동 시작** - 전원 재시동 후 자동 실행
+- 🛡️ **파일 모니터링** - hosts 파일 무단 수정 방지 및 자동 복구
+
+---
+
+## 🚀 최신 업데이트 (v2.0.0)
+
+<div align="center">
+
+![Latest Update](https://img.shields.io/badge/Latest-v2.0.0-green?style=for-the-badge)
+
+**앱 번들 최적화 및 자동 재시작 시스템 완성**
+
+</div>
+
+### ✨ 새로운 기능
+- 🚀 **독립 실행 파일**: PyInstaller로 완전 독립적인 앱 번들 생성
+- 🔄 **자동 재시작 시스템**: LaunchAgent 기반 백그라운드 서비스
+- 🖥️ **시스템 부팅 시 자동 시작**: 전원 재시동 후 자동 실행
+- 🛡️ **파일 모니터링**: hosts 파일 무단 수정 방지 및 자동 복구
+- 🎯 **앱 번들 최적화**: macOS에서 제대로 된 앱으로 인식
+
+### 🔧 기술적 개선사항
+- **PyInstaller 통합**: 모든 의존성을 포함한 독립 실행 파일
+- **LaunchAgent 설정**: 시스템 레벨 백그라운드 서비스
+- **자동 복구 메커니즘**: 오류 발생 시 자동 재시작
+- **로그 시스템**: 상세한 시스템 이벤트 기록
+- **보안 강화**: 파일 시스템 모니터링 및 자동 복구
+
+### 📦 배포 최적화
+- **완전 독립적**: 가상환경이나 Python 설치 불필요
+- **즉시 실행**: 다른 사용자에게 바로 배포 가능
+- **자동 설정**: 시스템 부팅 시 자동 시작
+- **안정성**: 오류 발생 시 자동 복구
 
 ---
 
@@ -36,12 +72,16 @@ FocusTimer.app/
 ├── Contents/
 │   ├── Info.plist                    # 앱 번들 정보
 │   ├── MacOS/
-│   │   ├── FocusTimer               # 메인 GUI 애플리케이션
+│   │   ├── FocusTimer               # 메인 GUI 애플리케이션 (독립 실행 파일)
 │   │   ├── FocusTimerCLI            # 명령줄 인터페이스
 │   │   └── FocusTimerHelper         # 백그라운드 서비스
 │   └── Resources/
 │       ├── config.json              # 앱 설정 파일
-│       └── com.focustimer.helper.plist  # LaunchAgent 설정
+│       ├── com.focustimer.helper.plist  # LaunchAgent 설정
+│       ├── FocusTimer.icns          # 앱 아이콘
+│       ├── algorithm_tab.py         # 알고리즘 시스템
+│       ├── gui_algorithm_manager.py # 알고리즘 GUI 관리
+│       └── user_data/               # 사용자 데이터
 ```
 
 ### 🔧 구성 요소

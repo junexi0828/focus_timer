@@ -11,6 +11,8 @@
 
 [개인용](#personal-edition) • [macOS 앱](#-macos-앱) • [기업용 CLI](#enterprise-cli-edition) • [기업용 GUI](#enterprise-gui-edition) • [기업용 웹](#enterprise-web-edition)
 
+**[English Version](README_EN.md)**
+
 </div>
 
 ---
@@ -89,6 +91,10 @@ personal/
 - 🔄 **백그라운드 서비스** - 지속적인 모니터링 및 보호
 - ⚙️ **중앙화된 설정 관리** - JSON 기반 설정 시스템
 - 🛡️ **시스템 레벨 보호** - hosts 파일 권한 관리
+- 🚀 **독립 실행 파일** - PyInstaller로 완전 독립적인 앱 번들
+- 🔄 **자동 재시작 시스템** - LaunchAgent 기반 백그라운드 서비스
+- 🖥️ **시스템 부팅 시 자동 시작** - 전원 재시동 후 자동 실행
+- 🛡️ **파일 모니터링** - hosts 파일 무단 수정 방지 및 자동 복구
 
 ### 🎮 사용 모드
 1. **GUI 모드** - 마우스 클릭으로 모든 제어
@@ -97,11 +103,17 @@ personal/
 
 ### 🚀 빠른 시작
 ```bash
-# 앱 실행
+# 앱 실행 (더블클릭 또는 터미널)
 open /Applications/FocusTimer.app
 
 # CLI 모드
 /Applications/FocusTimer.app/Contents/MacOS/FocusTimerCLI
+
+# 백그라운드 서비스 상태 확인
+launchctl list | grep focustimer
+
+# 로그 확인
+tail -f /var/log/FocusTimer/focus_timer.log
 ```
 
 ### 📁 파일 구조
@@ -110,12 +122,16 @@ FocusTimer.app/
 ├── Contents/
 │   ├── Info.plist                    # 앱 번들 정보
 │   ├── MacOS/
-│   │   ├── FocusTimer               # 메인 GUI 애플리케이션
+│   │   ├── FocusTimer               # 메인 GUI 애플리케이션 (독립 실행 파일)
 │   │   ├── FocusTimerCLI            # 명령줄 인터페이스
 │   │   └── FocusTimerHelper         # 백그라운드 서비스
 │   └── Resources/
 │       ├── config.json              # 앱 설정 파일
-│       └── com.focustimer.helper.plist  # LaunchAgent 설정
+│       ├── com.focustimer.helper.plist  # LaunchAgent 설정
+│       ├── FocusTimer.icns          # 앱 아이콘
+│       ├── algorithm_tab.py         # 알고리즘 시스템
+│       ├── gui_algorithm_manager.py # 알고리즘 GUI 관리
+│       └── user_data/               # 사용자 데이터
 ```
 
 **[📖 macOS App 상세 문서 →](FocusTimer.app/README.md)**
@@ -340,6 +356,8 @@ python3 remote_provider_example.py
 
 ---
 
+
+
 ## 📦 설치 및 배포
 
 <div align="center">
@@ -352,6 +370,7 @@ python3 remote_provider_example.py
 
 ### 🚀 설치 스크립트
 - **Personal Edition**: `personal/install_focus_timer.sh`
+- **macOS App**: `installers/install_focustimer_app.sh`
 - **Enterprise Edition**: `installers/install_enterprise.sh`
 - **제거 스크립트**: 각 버전별 uninstall 스크립트
 
@@ -377,6 +396,9 @@ brew install python-tk@3.13
 ### 📁 설치 파일 구조
 ```
 installers/
+├── install_focustimer_app.sh  # macOS 앱 설치
+├── uninstall_focustimer_app.sh # macOS 앱 제거
+├── update_focustimer_app.sh   # macOS 앱 업데이트
 ├── install_enterprise.sh      # Enterprise 버전 설치
 ├── uninstall_enterprise.sh    # Enterprise 버전 제거
 └── README.md                  # 설치 가이드
@@ -471,6 +493,8 @@ installers/
 2. **권한 확인**: `ls -la /etc/hosts`
 3. **서비스 상태**: `sudo launchctl list | grep focustimer`
 4. **설정 확인**: `config/config.json`
+5. **앱 번들 상태**: `file /Applications/FocusTimer.app/Contents/MacOS/FocusTimer`
+6. **LaunchAgent 상태**: `launchctl list | grep focustimer`
 
 ---
 
